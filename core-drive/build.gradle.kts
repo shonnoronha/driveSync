@@ -7,7 +7,10 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-/** OAuth "Web application" client id used by Credential Manager. Lives in git-ignored local.properties. */
+/**
+ * OAuth "Web application" client id used by Credential Manager: git-ignored local.properties locally, the
+ * DRIVESYNC_GOOGLE_SERVER_CLIENT_ID environment variable on CI.
+ */
 val googleServerClientId: String =
     Properties()
         .apply {
@@ -16,7 +19,9 @@ val googleServerClientId: String =
                 .takeIf { it.exists() }
                 ?.reader()
                 ?.use(::load)
-        }.getProperty("drivesync.googleServerClientId", "")
+        }.getProperty("drivesync.googleServerClientId")
+        ?: System.getenv("DRIVESYNC_GOOGLE_SERVER_CLIENT_ID")
+        ?: ""
 
 android {
     buildFeatures {

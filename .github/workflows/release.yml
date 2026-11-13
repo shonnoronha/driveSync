@@ -1,10 +1,22 @@
-# Full build on pushes to the release branch: everything CI checks, plus Android lint, the R8-shrunk release
-# build and the screenshot comparison. The APKs are kept as build artifacts (unsigned until signing is set up).
+# Full build on the release branch, and published releases from version tags.
+#
+# - Push to `release`: everything CI checks, plus Android lint, the R8-shrunk release build and the screenshot
+#   comparison. APKs are kept as build artifacts.
+# - Push a tag `vX.Y.Z` (on the release branch): the same build, signed with the release key from GitHub Secrets,
+#   published as a GitHub Release with generated notes. An unsigned APK is never published.
+#
+# Secrets (Settings → Secrets and variables → Actions):
+#   RELEASE_KEYSTORE_BASE64   the .jks file, base64-encoded
+#   RELEASE_KEYSTORE_PASSWORD
+#   RELEASE_KEY_ALIAS
+#   RELEASE_KEY_PASSWORD
+#   GOOGLE_SERVER_CLIENT_ID   the OAuth Web client id (sign-in does not work without it)
 name: Release build
 
 on:
   push:
     branches: [release]
+    tags: ['v*']
   workflow_dispatch:
 
 concurrency:
@@ -12,12 +24,14 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      IS_TAG: ${{ startsWith(github.ref, 'refs/tags/v') }}
     steps:
       - uses: actions/checkout@v5
 
@@ -28,12 +42,34 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v5
 
+      - name: Set up release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "DRIVESYNC_SIGNING_STOREFILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+            echo "Release signing is set up."
+          else
+            echo "No signing key in secrets: the release APK stays unsigned."
+          fi
+
+      - name: Version from the tag
+        if: env.IS_TAG == 'true'
+        run: |
+          echo "VERSION_ARGS=-PversionName=${GITHUB_REF_NAME#v} -PversionCode=${{ github.run_number }}" >> "$GITHUB_ENV"
+
       - name: Lint (detekt + ktlint)
         run: ./gradlew detekt ktlintCheck
 
       # Unit tests, coverage gates, Android lint, debug and R8-shrunk release builds.
       - name: Full build
-        run: ./gradlew build
+        env:
+          DRIVESYNC_SIGNING_STOREPASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          DRIVESYNC_SIGNING_KEYALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          DRIVESYNC_SIGNING_KEYPASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          DRIVESYNC_GOOGLE_SERVER_CLIENT_ID: ${{ secrets.GOOGLE_SERVER_CLIENT_ID }}
+        run: ./gradlew build $VERSION_ARGS
 
       # Fails when a screen no longer matches app/screenshots.
       - name: Screenshot comparison
@@ -52,6 +88,20 @@ jobs:
         with:
           name: apks
           path: app/build/outputs/apk/**/*.apk
+
+      - name: Publish the GitHub Release
+        if: env.IS_TAG == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          apk=app/build/outputs/apk/release/app-release.apk
+          if [ ! -f "$apk" ]; then
+            echo "::error title=Not signed::No signed release APK (are the signing secrets set?). Nothing was published."
+            exit 1
+          fi
+          cp "$apk" "drive-sync-${GITHUB_REF_NAME}.apk"
+          gh release create "$GITHUB_REF_NAME" "drive-sync-${GITHUB_REF_NAME}.apk" \
+            --title "Drive Sync ${GITHUB_REF_NAME}" --generate-notes
 
       - name: Upload reports
         if: failure()

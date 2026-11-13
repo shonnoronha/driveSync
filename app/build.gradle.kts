@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.drivesync.android.application)
     alias(libs.plugins.drivesync.android.compose)
@@ -5,17 +7,42 @@ plugins {
     alias(libs.plugins.roborazzi)
 }
 
+/**
+ * Release signing, from environment variables (CI, GitHub Secrets) or a git-ignored keystore.properties
+ * (storeFile, storePassword, keyAlias, keyPassword). Without either, the release build stays unsigned.
+ */
+val signing: Map<String, String> =
+    rootProject.file("keystore.properties").takeIf { it.exists() }?.let { file ->
+        Properties().apply { file.reader().use(::load) }.let { p ->
+            p.stringPropertyNames().associateWith(p::getProperty)
+        }
+    } ?: listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+        .mapNotNull { key -> System.getenv("DRIVESYNC_SIGNING_" + key.uppercase())?.let { key to it } }
+        .toMap()
+
 android {
     defaultConfig {
         applicationId = "io.github.drivesync"
-        versionCode = 1
-        versionName = "0.1.0"
+        // CI passes the tag (v0.2.0 -> 0.2.0) and the run number; local builds use the defaults.
+        versionCode = (findProperty("versionCode") as String?)?.toInt() ?: 1
+        versionName = (findProperty("versionName") as String?) ?: "0.1.0"
+    }
+    signingConfigs {
+        if (signing.size == 4) {
+            create("release") {
+                storeFile = rootProject.file(signing.getValue("storeFile"))
+                storePassword = signing.getValue("storePassword")
+                keyAlias = signing.getValue("keyAlias")
+                keyPassword = signing.getValue("keyPassword")
+            }
+        }
     }
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfigs.findByName("release")?.let { signingConfig = it }
         }
     }
     testOptions.unitTests.isIncludeAndroidResources = true
