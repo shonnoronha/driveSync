@@ -1,3 +1,5 @@
+# Quick checks on every push to main and every pull request: lint, unit tests with the coverage gates, and a
+# debug build. The full release build runs on the release branch (release.yml).
 name: CI
 
 on:
@@ -13,9 +15,9 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
 
@@ -29,8 +31,12 @@ jobs:
       - name: Lint (detekt + ktlint)
         run: ./gradlew detekt ktlintCheck
 
-      - name: Build and unit tests
-        run: ./gradlew build
+      # `check` runs the unit tests and the Kover coverage gates; Android lint waits for the release build.
+      - name: Unit tests and coverage
+        run: ./gradlew check -x lint
+
+      - name: Debug build
+        run: ./gradlew assembleDebug
 
       - name: Upload test reports
         if: failure()
