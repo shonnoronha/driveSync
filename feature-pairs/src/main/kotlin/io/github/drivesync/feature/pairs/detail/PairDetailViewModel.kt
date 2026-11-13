@@ -68,6 +68,7 @@ class PairDetailViewModel
                         now = now,
                         removed = extra.removed,
                         error = extra.error,
+                        accessLost = !trees.isPersisted(pair.localTreeUri),
                     )
                 }
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), PairDetailUiState())

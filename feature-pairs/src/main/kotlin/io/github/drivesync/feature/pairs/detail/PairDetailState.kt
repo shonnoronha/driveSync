@@ -17,6 +17,8 @@ data class PairDetailUiState(
     /** Set once the pair was removed, so the screen closes. */
     val removed: Boolean = false,
     val error: String? = null,
+    /** Android revoked the folder grant (e.g. the folder was renamed or moved): only re-picking it helps. */
+    val accessLost: Boolean = false,
 )
 
 /** Callbacks of the pair detail screen. */

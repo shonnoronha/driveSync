@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import io.github.drivesync.core.sync.model.ConflictPolicy
@@ -56,13 +57,8 @@ internal fun StatusSection(
     state: PairDetailUiState,
     actions: PairDetailActions,
 ) {
-    val container =
-        when (pair.state) {
-            PairState.NEEDS_ATTENTION -> MaterialTheme.colorScheme.errorContainer
-            PairState.CONFIRM_DELETES -> MaterialTheme.colorScheme.tertiaryContainer
-            else -> MaterialTheme.colorScheme.surfaceContainerLow
-        }
-    DsCard(Modifier.padding(horizontal = Tokens.pageInset, vertical = Tokens.gapSm), container = container) {
+    // A neutral card keeps the colored status chip readable; the message itself carries the color.
+    DsCard(Modifier.padding(horizontal = Tokens.pageInset, vertical = Tokens.gapSm)) {
         Column(Modifier.padding(Tokens.rowPaddingH), verticalArrangement = Arrangement.spacedBy(Tokens.gapMd)) {
             StatusChip(pair.state.label(), pair.state.tone())
             pair.detail
@@ -72,7 +68,7 @@ internal fun StatusSection(
                 }
             when (pair.state) {
                 PairState.NEEDS_ATTENTION -> {
-                    AttentionActions(actions)
+                    AttentionActions(state.accessLost, actions)
                 }
 
                 PairState.CONFIRM_DELETES -> {
@@ -95,14 +91,27 @@ internal fun StatusSection(
 }
 
 @Composable
-private fun AttentionActions(actions: PairDetailActions) {
-    Text(stringResource(R.string.detail_attention_hint), style = MaterialTheme.typography.bodyMedium)
+private fun AttentionActions(
+    accessLost: Boolean,
+    actions: PairDetailActions,
+) {
+    Text(
+        stringResource(if (accessLost) R.string.detail_access_lost_hint else R.string.detail_attention_hint),
+        style = MaterialTheme.typography.bodyMedium,
+    )
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(Tokens.gapSm),
         verticalArrangement = Arrangement.spacedBy(Tokens.gapSm),
     ) {
-        Button(onClick = actions.onSyncNow) { Text(stringResource(R.string.detail_try_again)) }
-        OutlinedButton(onClick = actions.onChooseFolderAgain) { Text(stringResource(R.string.detail_choose_folder)) }
+        if (accessLost) {
+            Button(onClick = actions.onChooseFolderAgain) { Text(stringResource(R.string.detail_give_access)) }
+            OutlinedButton(onClick = actions.onSyncNow) { Text(stringResource(R.string.detail_try_again)) }
+        } else {
+            Button(onClick = actions.onSyncNow) { Text(stringResource(R.string.detail_try_again)) }
+            OutlinedButton(
+                onClick = actions.onChooseFolderAgain,
+            ) { Text(stringResource(R.string.detail_choose_folder)) }
+        }
         OutlinedButton(onClick = actions.onRecreateDriveFolder) { Text(stringResource(R.string.detail_recreate_drive)) }
     }
 }

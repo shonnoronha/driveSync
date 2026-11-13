@@ -207,7 +207,8 @@ private fun lastSynced(
     if (at == null) {
         stringResource(R.string.pair_never_synced)
     } else {
-        val ago = DateUtils.getRelativeTimeSpanString(at, now, DateUtils.MINUTE_IN_MILLIS).toString()
+        // Clamp: a timestamp slightly ahead of the screen's clock must not read "in 0 minutes".
+        val ago = DateUtils.getRelativeTimeSpanString(minOf(at, now), now, DateUtils.MINUTE_IN_MILLIS).toString()
         stringResource(R.string.pair_last_synced, ago)
     }
 

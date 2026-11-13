@@ -25,7 +25,7 @@ class SafDocumentTree(
     private val rootId: String = DocumentsContract.getTreeDocumentId(treeUri)
 
     override fun root(): DocumentInfo =
-        guarded { query(rootId) } ?: throw TreeUnavailableException("The phone folder no longer exists")
+        guarded { query(rootId) } ?: throw TreeUnavailableException("it no longer exists")
 
     override fun query(documentId: String): DocumentInfo? =
         try {
@@ -42,7 +42,7 @@ class SafDocumentTree(
         return try {
             guarded { resolver.query(uri, PROJECTION, null, null, null) }?.use { cursor ->
                 buildList { while (cursor.moveToNext()) add(cursor.toInfo()) }
-            } ?: throw TreeUnavailableException("Listing the phone folder failed")
+            } ?: throw TreeUnavailableException("listing it failed")
         } catch (_: FileNotFoundException) {
             emptyList()
         } catch (_: IllegalArgumentException) {
@@ -127,7 +127,7 @@ class SafDocumentTree(
         try {
             block()
         } catch (e: SecurityException) {
-            throw TreeUnavailableException("Access to the phone folder was lost", e)
+            throw TreeUnavailableException("the app no longer has access to it", e)
         }
 
     private fun Cursor.toInfo(): DocumentInfo =

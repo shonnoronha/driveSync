@@ -91,4 +91,6 @@
     <string name="direction_short_upload">Backup</string>
     <string name="direction_short_download">Copy</string>
     <string name="add_drive_folder">Drive folder</string>
+    <string name="detail_access_lost_hint">Android removes an app\'s access when a folder is renamed or moved. Choose the folder again to continue; nothing is deleted.</string>
+    <string name="detail_give_access">Give access again</string>
 </resources>

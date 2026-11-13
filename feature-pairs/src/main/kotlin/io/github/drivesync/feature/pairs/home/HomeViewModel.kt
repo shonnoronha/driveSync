@@ -41,7 +41,10 @@ class HomeViewModel
             }
 
         val state: StateFlow<HomeUiState> =
-            combine(pairs.observePairs(), activity.observeConflicts(), running, clock) { list, conflicts, work, now ->
+            combine(pairs.observePairs(), activity.observeConflicts(), running, clock) { list, conflicts, work, _ ->
+                // The ticker only triggers a redraw each minute; the time itself is read fresh, so a sync that just
+                // finished is never "in the future".
+                val now = System.currentTimeMillis()
                 val pairRuns = work.mapNotNull { info -> SyncScheduler.pairIdOf(info.tags) }
                 val allRuns = work.any { info -> SyncScheduler.pairIdOf(info.tags) == null }
                 homeState(list, conflicts.size, pairRuns.toSet(), syncingAll = allRuns, now = now)
