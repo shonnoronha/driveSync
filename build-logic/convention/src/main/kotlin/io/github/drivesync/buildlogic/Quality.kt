@@ -16,7 +16,7 @@ internal fun Project.configureQuality() {
         buildUponDefaultConfig = true
         parallel = true
         config.setFrom(rootProject.file("config/detekt/detekt.yml"))
-        source.setFrom("src/main/kotlin", "src/test/kotlin", "src/androidTest/kotlin")
+        source.setFrom("src/main/kotlin", "src/test/kotlin", "src/testFixtures/kotlin", "src/androidTest/kotlin")
     }
     configurations.matching { it.name == "detekt" }.configureEach {
         resolutionStrategy.eachDependency {

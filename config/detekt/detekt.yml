@@ -9,8 +9,15 @@ complexity:
   LongParameterList:
     ignoreAnnotated: ['Composable']
     ignoreDefaultParameters: true
+    excludes: ['**/test/**', '**/testFixtures/**']
+  TooManyFunctions:
+    thresholdInClasses: 16
+    excludes: ['**/test/**', '**/testFixtures/**']
 
 style:
+  # Early returns are how the executor says "re-check failed, re-plan" (PRD 3.9 rule 4); keep them readable.
+  ReturnCount:
+    active: false
   MagicNumber:
     ignorePropertyDeclaration: true
     ignoreCompanionObjectPropertyDeclaration: true
