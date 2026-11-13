@@ -1,4 +1,5 @@
 import io.github.drivesync.buildlogic.JAVA_VERSION
+import io.github.drivesync.buildlogic.configureCoverage
 import io.github.drivesync.buildlogic.configureKotlinJvmTarget
 import io.github.drivesync.buildlogic.configureQuality
 import io.github.drivesync.buildlogic.configureUnitTests
@@ -20,5 +21,6 @@ class JvmLibraryConventionPlugin : Plugin<Project> {
         configureKotlinJvmTarget()
         configureUnitTests()
         configureQuality()
+        configureCoverage()
     }
 }

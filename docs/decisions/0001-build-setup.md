@@ -21,3 +21,6 @@ Build-order step 1 (CLAUDE.md): multi-module Gradle skeleton, version catalog, H
   project's Kotlin 2.4 does not leak into detekt's classpath. The detekt-formatting plugin is not added;
   ktlint runs through `org.jlleitschuh.gradle.ktlint` (ktlint 1.8.0) instead.
 - **core-sync** uses the pure `drivesync.jvm.library` plugin: no Android, no Hilt.
+- **Coverage:** Kover on `drivesync.jvm.library` modules (core-sync). `check` runs `koverVerify`, which fails
+  below 70% line coverage (NFR-9). `./gradlew :core-sync:koverLog` prints the number; the HTML report comes
+  from `:core-sync:koverHtmlReport`.
