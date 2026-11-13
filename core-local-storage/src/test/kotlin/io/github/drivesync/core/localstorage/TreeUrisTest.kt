@@ -9,13 +9,27 @@ class TreeUrisTest {
 
     @Test
     fun `internal storage paths`() {
-        assertEquals(TreeUris.Location("DCIM/Camera", true), TreeUris.location(base + "primary%3ADCIM%2FCamera"))
+        val camera = TreeUris.location(base + "primary%3ADCIM%2FCamera")!!
+        assertEquals(TreeUris.Location("DCIM/Camera", "primary"), camera)
+        assertEquals(true, camera.onInternalStorage)
         assertEquals("Camera", TreeUris.folderName(base + "primary%3ADCIM%2FCamera"))
     }
 
     @Test
     fun `SD card paths`() {
-        assertEquals(TreeUris.Location("Music", false), TreeUris.location(base + "1234-ABCD%3AMusic"))
+        val music = TreeUris.location(base + "1234-ABCD%3AMusic")!!
+        assertEquals(false, music.onInternalStorage)
+    }
+
+    @Test
+    fun `nested and equal folders overlap`() {
+        val dcim = TreeUris.Location("DCIM", "primary")
+        assertEquals(true, dcim.overlaps(TreeUris.Location("DCIM/Camera", "primary")))
+        assertEquals(true, TreeUris.Location("DCIM/Camera", "primary").overlaps(dcim))
+        assertEquals(true, dcim.overlaps(TreeUris.Location("DCIM/", "primary")))
+        assertEquals(true, dcim.overlaps(TreeUris.Location("", "primary")))
+        assertEquals(false, dcim.overlaps(TreeUris.Location("DCIM2", "primary")))
+        assertEquals(false, dcim.overlaps(TreeUris.Location("DCIM", "1234-ABCD")))
     }
 
     @Test

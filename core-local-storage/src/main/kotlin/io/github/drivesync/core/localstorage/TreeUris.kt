@@ -9,16 +9,26 @@ object TreeUris {
     data class Location(
         /** Folder path inside the volume; empty for the volume root. */
         val path: String,
-        /** False for SD cards and USB drives. */
-        val onInternalStorage: Boolean,
-    )
+        /** "primary" for internal storage, the volume id (e.g. "1234-ABCD") for SD cards and USB drives. */
+        val volume: String,
+    ) {
+        val onInternalStorage: Boolean get() = volume == PRIMARY_VOLUME
+
+        /** True when one folder contains the other (or they are the same): syncing both would loop (FR-P7). */
+        fun overlaps(other: Location): Boolean {
+            if (volume != other.volume) return false
+            val a = path.trim('/')
+            val b = other.path.trim('/')
+            return a == b || a.isEmpty() || b.isEmpty() || a.startsWith("$b/") || b.startsWith("$a/")
+        }
+    }
 
     fun location(treeUri: String): Location? {
         val encoded = treeUri.substringAfter("/tree/", missingDelimiterValue = "").substringBefore('/')
         if (encoded.isEmpty()) return null
         val documentId = URLDecoder.decode(encoded, Charsets.UTF_8.name())
         if (':' !in documentId) return null
-        return Location(documentId.substringAfter(':'), documentId.substringBefore(':') == PRIMARY_VOLUME)
+        return Location(documentId.substringAfter(':'), documentId.substringBefore(':'))
     }
 
     /** The last folder name, for a new pair's default name. */

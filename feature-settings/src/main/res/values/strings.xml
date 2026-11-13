@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onboarding_title">Keep phone folders in sync with Google Drive</string>
+    <string name="onboarding_point_folders">Pick any folders on your phone: photos, notes, documents.</string>
+    <string name="onboarding_point_drive">Each gets its own folder inside \"Drive Sync\" in your Google Drive.</string>
+    <string name="onboarding_point_safe">Nothing is ever deleted for good: removed files go to the trash, and changes on both sides keep both versions.</string>
+    <string name="onboarding_point_private">The app only sees the files it creates in Drive, nothing else.</string>
+    <string name="onboarding_sign_in">Sign in with Google</string>
+    <string name="onboarding_working_sign_in">Signing in…</string>
+    <string name="onboarding_working_drive">Setting up the Drive Sync folder…</string>
+    <string name="onboarding_permissions_title">Stay in the loop</string>
+    <string name="onboarding_notifications">Notifications</string>
+    <string name="onboarding_notifications_body">Get told when a folder needs attention or both sides changed a file.</string>
+    <string name="onboarding_notifications_allow">Allow</string>
+    <string name="onboarding_notifications_allowed">Allowed</string>
+    <string name="onboarding_battery">Background syncing</string>
+    <string name="onboarding_battery_body">Android may delay background syncs to save battery. If syncs seem late, let Drive Sync run in the background.</string>
+    <string name="onboarding_battery_open">Battery settings</string>
+    <string name="onboarding_done">Continue</string>
+    <string name="onboarding_signed_in_as">Signed in as %1$s</string>
+</resources>
