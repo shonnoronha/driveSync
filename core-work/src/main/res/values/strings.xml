@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="channel_progress">Sync progress</string>
+    <string name="channel_attention">Needs attention</string>
+    <string name="channel_conflicts">Conflicts</string>
+    <string name="channel_errors">Errors</string>
+    <string name="notification_syncing">Syncing folders…</string>
+    <string name="notification_attention_title">%1$s needs attention</string>
+    <plurals name="notification_conflicts">
+        <item quantity="one">%d conflict: both versions were kept</item>
+        <item quantity="other">%d conflicts: both versions were kept</item>
+    </plurals>
+    <plurals name="notification_failures">
+        <item quantity="one">%2$s: %1$d file failed and will be retried</item>
+        <item quantity="other">%2$s: %1$d files failed and will be retried</item>
+    </plurals>
+</resources>

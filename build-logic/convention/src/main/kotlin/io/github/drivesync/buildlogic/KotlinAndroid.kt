@@ -33,6 +33,12 @@ internal fun Project.configureAndroidLibrary(extension: LibraryExtension) {
         defaultConfig.minSdk = libs.versionInt("minSdk")
         compileOptions.sourceCompatibility = JAVA_VERSION
         compileOptions.targetCompatibility = JAVA_VERSION
+        testOptions.unitTests.all {
+            // Robolectric may run here: cap the test JVM so builds stay clear of the OOM killer on low-RAM machines.
+            it.maxHeapSize = "1g"
+            // Robolectric reaches into FileDescriptor internals, which JDK 17+ closes by default.
+            it.jvmArgs("--add-opens=java.base/java.io=ALL-UNNAMED", "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED")
+        }
     }
     configureKotlinJvmTarget()
     configureUnitTests()
