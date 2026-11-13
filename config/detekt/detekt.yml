@@ -7,7 +7,7 @@ naming:
 
 complexity:
   LongParameterList:
-    ignoreAnnotated: ['Composable']
+    ignoreAnnotated: ['Composable', 'Inject']
     ignoreDefaultParameters: true
     excludes: ['**/test/**', '**/testFixtures/**']
   TooManyFunctions:

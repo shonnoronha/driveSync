@@ -1,6 +1,7 @@
 package io.github.drivesync.core.sync.plan
 
 import io.github.drivesync.core.sync.model.BaseSnapshot
+import io.github.drivesync.core.sync.model.ConflictPolicy
 import io.github.drivesync.core.sync.model.LocalEntry
 import io.github.drivesync.core.sync.model.PairSettings
 import io.github.drivesync.core.sync.model.RelPath
@@ -18,6 +19,8 @@ data class PlanInput(
     val conflictStamp: ConflictStamp,
     /** Set after the user confirmed a mass delete for this run. */
     val deletionsConfirmed: Boolean = false,
+    /** The user's per-file answers to pending conflicts; they override the pair's policy for those paths. */
+    val resolutions: Map<RelPath, ConflictPolicy> = emptyMap(),
 )
 
 /** Used to name conflict copies: `report (conflict 2026-11-12 14-30 Pixel).docx`. */

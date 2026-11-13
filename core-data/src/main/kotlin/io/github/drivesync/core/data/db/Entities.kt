@@ -105,6 +105,18 @@ data class ConflictEntity(
     val detectedAt: Long,
 )
 
+/** The user's answer to a pending conflict, applied (and cleared) by the pair's next run. */
+@Entity(
+    tableName = "resolutions",
+    primaryKeys = ["pairId", "path"],
+    foreignKeys = [ForeignKey(PairEntity::class, ["id"], ["pairId"], onDelete = ForeignKey.CASCADE)],
+)
+data class ResolutionEntity(
+    val pairId: String,
+    val path: String,
+    val policy: ConflictPolicy,
+)
+
 /** Files the latest run left alone (Google Docs, duplicates in upload-only pairs), replaced every run (FR-S12). */
 @Entity(
     tableName = "skipped",

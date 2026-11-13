@@ -37,6 +37,12 @@ interface PairDao {
         detail: String?,
     )
 
+    @Query("UPDATE pairs SET localTreeUri = :treeUri WHERE id = :id")
+    suspend fun setTreeUri(
+        id: String,
+        treeUri: String,
+    )
+
     @Query("UPDATE pairs SET lastSyncAt = :time WHERE id = :id")
     suspend fun setLastSync(
         id: String,
@@ -139,4 +145,19 @@ interface PairItemsDao {
 
     @Query("DELETE FROM skipped WHERE pairId = :pairId")
     suspend fun deleteSkipped(pairId: String)
+}
+
+@Dao
+interface ResolutionDao {
+    @Upsert
+    suspend fun resolve(resolution: ResolutionEntity)
+
+    @Query("SELECT * FROM resolutions WHERE pairId = :pairId")
+    suspend fun resolutions(pairId: String): List<ResolutionEntity>
+
+    @Query("SELECT * FROM resolutions")
+    fun observeResolutions(): Flow<List<ResolutionEntity>>
+
+    @Query("DELETE FROM resolutions WHERE pairId = :pairId")
+    suspend fun clearResolutions(pairId: String)
 }

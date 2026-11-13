@@ -100,6 +100,8 @@ class SyncRecorderTest : DbTest() {
             )
             val conflict = activity.observeConflicts().first().single()
             assertEquals(ConflictKind.BOTH_MODIFIED, conflict.kind)
+            val logged = activity.observe("p").first().single { it.kind == ActivityKind.CONFLICT }
+            assertTrue(logged.detail!!.startsWith("Both versions kept; the other one is c (conflict"))
         }
 
     @Test

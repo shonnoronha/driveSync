@@ -39,6 +39,11 @@ class DriveSyncFolders
             }
         }
 
+        /** "Remove pair and trash its Drive folder" (PRD 3.8): Drive trash, never a permanent delete. */
+        suspend fun trashFolder(folderId: String) {
+            client.trash(folderId)
+        }
+
         /** Tagged pair folders inside the root, for "link to an existing Drive Sync subfolder" (PRD 3.10). */
         suspend fun pairFolders(rootId: String): List<PairFolder> =
             client

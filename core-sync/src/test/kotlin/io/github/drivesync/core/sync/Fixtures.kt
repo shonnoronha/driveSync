@@ -2,6 +2,7 @@ package io.github.drivesync.core.sync
 
 import io.github.drivesync.core.sync.model.BaseEntry
 import io.github.drivesync.core.sync.model.BaseSnapshot
+import io.github.drivesync.core.sync.model.ConflictPolicy
 import io.github.drivesync.core.sync.model.LocalEntry
 import io.github.drivesync.core.sync.model.PairSettings
 import io.github.drivesync.core.sync.model.RelPath
@@ -154,6 +155,7 @@ fun planOf(
     base: List<BaseEntry>?,
     settings: PairSettings = PairSettings(),
     deletionsConfirmed: Boolean = false,
+    resolutions: Map<RelPath, ConflictPolicy> = emptyMap(),
 ): PlanResult =
     SyncPlanner.plan(
         PlanInput(
@@ -163,6 +165,7 @@ fun planOf(
             settings = settings,
             conflictStamp = testStamp,
             deletionsConfirmed = deletionsConfirmed,
+            resolutions = resolutions,
         ),
     )
 
@@ -178,6 +181,7 @@ fun planReady(
     remote: List<RemoteEntry>,
     base: List<BaseEntry>?,
     settings: PairSettings = PairSettings(),
+    resolutions: Map<RelPath, ConflictPolicy> = emptyMap(),
 ): SyncPlan {
     val withAnchor = base != null
     return planOf(
@@ -185,6 +189,7 @@ fun planReady(
         remote = if (withAnchor) remote + anchor.remote else remote,
         base = if (withAnchor) base.orEmpty() + anchor.base else null,
         settings = settings,
+        resolutions = resolutions,
     ).ready()
 }
 

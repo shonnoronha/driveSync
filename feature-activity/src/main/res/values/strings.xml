@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="activity_title">Activity</string>
+    <string name="activity_back">Back</string>
+    <string name="activity_empty_title">Nothing yet</string>
+    <string name="activity_empty_body">Uploads, downloads, deletes and conflicts show up here.</string>
+    <string name="activity_filter_all">All</string>
+    <string name="activity_filter_transfers">Transfers</string>
+    <string name="activity_filter_deletes">Deletes</string>
+    <string name="activity_filter_conflicts">Conflicts</string>
+    <string name="activity_filter_problems">Problems</string>
+    <string name="activity_today">Today</string>
+    <string name="kind_uploaded">Uploaded to Drive</string>
+    <string name="kind_downloaded">Downloaded to phone</string>
+    <string name="kind_moved">Moved</string>
+    <string name="kind_folder_created">Folder created</string>
+    <string name="kind_trashed">Moved to Drive trash</string>
+    <string name="kind_recycled">Moved to phone recycle folder</string>
+    <string name="kind_conflict">Conflict</string>
+    <string name="kind_failed">Failed</string>
+    <string name="kind_paused">Paused</string>
+    <string name="kind_confirm">Waiting for you to confirm deletes</string>
+</resources>

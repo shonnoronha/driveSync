@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="conflicts_title">Conflicts</string>
+    <string name="conflicts_back">Back</string>
+    <string name="conflicts_empty_title">No conflicts</string>
+    <string name="conflicts_empty_body">When a file changes on both sides between syncs, it shows up here.</string>
+    <string name="conflicts_pending">Needs your choice</string>
+    <string name="conflicts_resolved">Handled automatically in the last sync</string>
+    <string name="conflicts_keep_phone">Keep phone</string>
+    <string name="conflicts_keep_drive">Keep Drive</string>
+    <string name="conflicts_keep_both">Keep both</string>
+    <string name="conflicts_keep_file">Keep the file</string>
+    <string name="conflicts_chosen">Your choice is applied on the next sync: %1$s</string>
+    <string name="kind_both_modified">Changed on the phone and on Drive</string>
+    <string name="kind_both_new">Added on both sides with different content</string>
+    <string name="kind_local_modified_remote_deleted">Changed on the phone, deleted on Drive</string>
+    <string name="kind_remote_modified_local_deleted">Changed on Drive, deleted on the phone</string>
+    <string name="kind_destination_modified">Changed on the side this pair copies to</string>
+    <string name="kind_type_mismatch">A file on one side and a folder on the other. Rename one of them to continue.</string>
+    <string name="kind_duplicate">Several Drive files with the same name</string>
+    <string name="resolution_kept_both">Both kept; the other version is now %1$s</string>
+    <string name="resolution_kept_both_plain">Both versions kept</string>
+    <string name="resolution_local_won">The phone version was kept</string>
+    <string name="resolution_remote_won">The Drive version was kept</string>
+    <string name="resolution_kept_modified">The changed file was kept and copied back</string>
+</resources>

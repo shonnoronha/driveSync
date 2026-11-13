@@ -139,4 +139,17 @@ class PairRepositoryTest : DbTest() {
         val repo = PairRepository(db)
         assertEquals(36, repo.newPairId().length)
     }
+
+    @Test
+    fun `changing the phone folder forgets the base`() =
+        runTest {
+            val pair = addPair()
+            repo.baseStore(pair.id).commit(listOf(BaseUpdate.Put(entry("a"))))
+            repo.changeLocalFolder(pair.id, "content://new")
+            assertEquals("content://new", repo.pair(pair.id)!!.localTreeUri)
+            assertNull(repo.baseStore(pair.id).load())
+            repo.baseStore(pair.id).commit(emptyList())
+            repo.restoreInsteadOfDelete(pair.id)
+            assertNull(repo.baseStore(pair.id).load())
+        }
 }

@@ -89,6 +89,24 @@ class PairRepository(
         db.base().reset(id)
     }
 
+    /**
+     * Points the pair at a re-picked phone folder (after access was lost). The base is dropped, so the next run
+     * merges: nothing is deleted on Drive even if the new folder lacks files.
+     */
+    suspend fun changeLocalFolder(
+        id: String,
+        treeUri: String,
+    ) {
+        db.pairs().setTreeUri(id, treeUri)
+        db.base().reset(id)
+    }
+
+    /**
+     * "Don't delete, restore" after a mass-delete warning (FR-S6): dropping the base makes the next run merge,
+     * so the missing files are copied back instead of deleted on the other side.
+     */
+    suspend fun restoreInsteadOfDelete(id: String) = db.base().reset(id)
+
     /** Stops syncing and forgets the pair's records. Never touches files on either side (PRD 3.8). */
     suspend fun remove(id: String) = db.pairs().delete(id)
 

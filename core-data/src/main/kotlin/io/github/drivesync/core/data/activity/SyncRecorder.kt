@@ -9,6 +9,8 @@ import io.github.drivesync.core.data.db.SkippedEntity
 import io.github.drivesync.core.sync.engine.ActionOutcome
 import io.github.drivesync.core.sync.engine.ActionResult
 import io.github.drivesync.core.sync.engine.SyncOutcome
+import io.github.drivesync.core.sync.plan.Conflict
+import io.github.drivesync.core.sync.plan.ConflictResolution
 import io.github.drivesync.core.sync.plan.MoveReason
 import io.github.drivesync.core.sync.plan.PauseReason
 import io.github.drivesync.core.sync.plan.SyncAction
@@ -107,11 +109,38 @@ class SyncRecorder(
         plan: SyncPlan,
         now: Long,
     ) = plan.conflicts.map {
-        val detail =
-            "${it.kind.name.lowercase()}: ${it.resolution.name.lowercase()}" +
-                it.conflictCopy?.let { c -> " → $c" }.orEmpty()
-        ActivityEntity(pairId = pairId, time = now, kind = ActivityKind.CONFLICT, path = it.path.value, detail = detail)
+        ActivityEntity(
+            pairId = pairId,
+            time = now,
+            kind = ActivityKind.CONFLICT,
+            path = it.path.value,
+            detail = it.describe(),
+        )
     }
+
+    private fun Conflict.describe(): String =
+        when (resolution) {
+            ConflictResolution.KEPT_BOTH -> {
+                conflictCopy?.let { "Both versions kept; the other one is $it" }
+                    ?: "Both versions kept"
+            }
+
+            ConflictResolution.LOCAL_WON -> {
+                "The phone version was kept"
+            }
+
+            ConflictResolution.REMOTE_WON -> {
+                "The Drive version was kept"
+            }
+
+            ConflictResolution.KEPT_MODIFIED -> {
+                "The changed file was kept and copied back"
+            }
+
+            ConflictResolution.PENDING -> {
+                "Waiting for your choice"
+            }
+        }
 
     private fun ActionResult.toActivity(
         pairId: String,

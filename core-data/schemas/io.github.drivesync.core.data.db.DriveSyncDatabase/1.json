@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "52fb4f59df6e221a00c96ec03b04b82c",
+    "identityHash": "66d4ab7b9b336949a889efd1618821c4",
     "entities": [
       {
         "tableName": "pairs",
@@ -351,11 +351,55 @@
             ]
           }
         ]
+      },
+      {
+        "tableName": "resolutions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`pairId` TEXT NOT NULL, `path` TEXT NOT NULL, `policy` TEXT NOT NULL, PRIMARY KEY(`pairId`, `path`), FOREIGN KEY(`pairId`) REFERENCES `pairs`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "pairId",
+            "columnName": "pairId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "path",
+            "columnName": "path",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "policy",
+            "columnName": "policy",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "pairId",
+            "path"
+          ]
+        },
+        "foreignKeys": [
+          {
+            "table": "pairs",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "pairId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '52fb4f59df6e221a00c96ec03b04b82c')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '66d4ab7b9b336949a889efd1618821c4')"
     ]
   }
 }

@@ -1,8 +1,10 @@
 package io.github.drivesync.core.sync.engine
 
 import io.github.drivesync.core.sync.model.BaseSnapshot
+import io.github.drivesync.core.sync.model.ConflictPolicy
 import io.github.drivesync.core.sync.model.LocalEntry
 import io.github.drivesync.core.sync.model.PairSettings
+import io.github.drivesync.core.sync.model.RelPath
 import io.github.drivesync.core.sync.model.RemoteEntry
 import io.github.drivesync.core.sync.model.Snapshot
 import io.github.drivesync.core.sync.plan.ConflictStamp
@@ -35,12 +37,13 @@ class SyncEngine(
         settings: PairSettings,
         stamp: ConflictStamp,
         deletionsConfirmed: Boolean = false,
+        resolutions: Map<RelPath, ConflictPolicy> = emptyMap(),
     ): SyncOutcome =
         mutex.withLock {
             val base = baseStore.load()
             val remoteSnapshot = remote.scan()
             val localSnapshot = withHashes(cleanUpTempFiles(local.scan()), remoteSnapshot, base)
-            val input = PlanInput(localSnapshot, remoteSnapshot, base, settings, stamp, deletionsConfirmed)
+            val input = PlanInput(localSnapshot, remoteSnapshot, base, settings, stamp, deletionsConfirmed, resolutions)
             when (val result = SyncPlanner.plan(input)) {
                 is PlanResult.Paused -> {
                     SyncOutcome.Paused(result.reason)

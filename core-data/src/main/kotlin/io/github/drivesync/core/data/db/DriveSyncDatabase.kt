@@ -10,6 +10,7 @@ import androidx.room.RoomDatabase
         ActivityEntity::class,
         ConflictEntity::class,
         SkippedEntity::class,
+        ResolutionEntity::class,
     ],
     version = 1,
     exportSchema = true,
@@ -22,6 +23,8 @@ abstract class DriveSyncDatabase : RoomDatabase() {
     abstract fun activity(): ActivityDao
 
     abstract fun pairItems(): PairItemsDao
+
+    abstract fun resolutions(): ResolutionDao
 
     companion object {
         const val NAME = "drivesync.db"

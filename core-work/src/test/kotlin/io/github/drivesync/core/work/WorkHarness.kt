@@ -88,7 +88,8 @@ class WorkHarness(
             override fun remote(pair: SyncPair): RemoteStore = remotes.getValue(pair.id)
         }
 
-    val runner = PairSyncRunner(pairs, SyncRecorder(db) { 0L }, stores, environment)
+    val activity = ActivityRepository(db)
+    val runner = PairSyncRunner(pairs, SyncRecorder(db) { 0L }, activity, stores, environment)
     val coordinator = SyncCoordinator(pairs, settings, runner, notifier, ActivityRepository(db), environment)
 
     suspend fun signIn() = settings.setAccount("me@example.com", "root")

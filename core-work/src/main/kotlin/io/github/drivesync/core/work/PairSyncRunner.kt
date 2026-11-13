@@ -1,5 +1,6 @@
 package io.github.drivesync.core.work
 
+import io.github.drivesync.core.data.activity.ActivityRepository
 import io.github.drivesync.core.data.activity.SyncRecorder
 import io.github.drivesync.core.data.pairs.PairRepository
 import io.github.drivesync.core.drive.api.DriveException
@@ -48,6 +49,7 @@ class PairSyncRunner
     constructor(
         private val pairs: PairRepository,
         private val recorder: SyncRecorder,
+        private val activity: ActivityRepository,
         private val stores: SyncStores,
         private val environment: SyncEnvironment,
     ) {
@@ -63,8 +65,9 @@ class PairSyncRunner
                 try {
                     val engine = SyncEngine(stores.local(pair), stores.remote(pair), pairs.baseStore(pair.id))
                     val stamp = ConflictStamp(environment.now(), deviceName ?: environment.defaultDeviceName)
-                    val outcome = engine.sync(pair.settings, stamp, deletionsConfirmed)
+                    val outcome = engine.sync(pair.settings, stamp, deletionsConfirmed, activity.resolutions(pair.id))
                     recorder.record(pair.id, outcome)
+                    if (outcome is SyncOutcome.Completed) activity.clearResolutions(pair.id)
                     outcome.toResult(pair.id)
                 } catch (e: CancellationException) {
                     throw e

@@ -131,6 +131,15 @@ class DriveSyncFoldersTest {
             }
 
         @Test
+        fun `a removed pair's folder goes to the trash`() =
+            runTest {
+                val root = folders.findOrCreateRoot()
+                val pair = folders.createPairFolder(root, "Old", "u")
+                folders.trashFolder(pair.folderId)
+                assertEquals(FolderStatus.TRASHED, folders.status(pair.folderId))
+            }
+
+        @Test
         fun `unique names skip every taken one`() {
             assertEquals("a (3)", DriveSyncFolders.uniqueName("a", setOf("a", "a (2)")))
             assertEquals("a", DriveSyncFolders.uniqueName("a", emptySet()))

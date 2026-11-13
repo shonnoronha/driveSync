@@ -61,4 +61,27 @@
     <string name="add_review_drive_existing">%1$d files already in the Drive folder</string>
     <string name="add_review_first_sync">The first sync only copies and links files. Nothing is deleted on either side; files that differ are kept twice.</string>
     <string name="add_review_counting">Counting files…</string>
+    <string name="detail_back">Back</string>
+    <string name="detail_try_again">Try again</string>
+    <string name="detail_choose_folder">Choose the phone folder again</string>
+    <string name="detail_recreate_drive">Recreate the Drive folder</string>
+    <string name="detail_attention_hint">Nothing is deleted while a folder needs attention.</string>
+    <string name="detail_delete_them">Delete them</string>
+    <string name="detail_restore_them">Restore them instead</string>
+    <string name="detail_confirm_hint">Deleted files go to the Drive trash or the phone\'s recycle folder, never deleted for good.</string>
+    <string name="detail_sync_enabled">Sync this folder</string>
+    <string name="detail_sync_enabled_body">Turn off to pause syncing; nothing is deleted.</string>
+    <string name="detail_options">Options</string>
+    <string name="detail_direction">Direction</string>
+    <string name="detail_skipped">%1$d Google Docs files are not synced (they have no file content).</string>
+    <string name="detail_recent">Recent activity</string>
+    <string name="detail_see_all">See all activity</string>
+    <string name="detail_no_activity">No activity yet</string>
+    <string name="detail_remove">Remove folder</string>
+    <string name="detail_remove_title">Remove \"%1$s\"?</string>
+    <string name="detail_remove_body">Syncing stops. Files on the phone stay where they are.</string>
+    <string name="detail_remove_trash">Also move its Drive folder to the trash</string>
+    <string name="detail_remove_confirm">Remove</string>
+    <string name="detail_cancel">Cancel</string>
+
 </resources>

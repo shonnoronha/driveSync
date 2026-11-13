@@ -202,4 +202,53 @@ class SyncCoordinatorTest {
             h.coordinator.syncAll()
             assertEquals(0, h.db.activity().deleteOlderThan(Long.MAX_VALUE))
         }
+
+    @Test
+    fun `a conflict answer is applied once`() =
+        test { h ->
+            h.signIn()
+            val id = h.addPair("Notes")
+            h.pairs.updateSettings(
+                id,
+                io.github.drivesync.core.sync.model.PairSettings(
+                    conflictPolicy = io.github.drivesync.core.sync.model.ConflictPolicy.ASK,
+                ),
+            )
+            h.locals.getValue(id).write("c.md", "phone")
+            h.drives.getValue(id).write("c.md", "drive")
+            h.coordinator.syncAll()
+            assertEquals(
+                null,
+                h.drives
+                    .getValue(id)
+                    .files()["c.md"]
+                    ?.takeIf { it == listOf("phone") },
+            )
+            h.activity.resolve(id, "c.md", io.github.drivesync.core.sync.model.ConflictPolicy.LOCAL_WINS)
+            h.coordinator.syncPair(id, false)
+            assertEquals(listOf("phone"), h.drives.getValue(id).files()["c.md"])
+            assertEquals(emptyMap<Any, Any>(), h.activity.resolutions(id))
+        }
+
+    @Test
+    fun `restore instead of delete copies files back`() =
+        test { h ->
+            h.signIn()
+            val id = h.addPair("Notes")
+            val local = h.locals.getValue(id)
+            repeat(30) { local.write("f$it.md", "$it") }
+            h.coordinator.syncAll()
+            repeat(25) { local.delete("f$it.md") }
+            h.coordinator.syncAll()
+            h.pairs.restoreInsteadOfDelete(id)
+            h.coordinator.syncPair(id, false)
+            assertEquals(30, local.files().size)
+            assertEquals(
+                30,
+                h.drives
+                    .getValue(id)
+                    .files()
+                    .size,
+            )
+        }
 }

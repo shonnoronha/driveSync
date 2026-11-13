@@ -132,6 +132,7 @@ internal class PlanBuilder(
     base: BaseSnapshot?,
     private val settings: PairSettings,
     stamp: ConflictStamp,
+    private val resolutions: Map<RelPath, ConflictPolicy>,
     preSkipped: List<Skipped>,
     /** Paths the planner does not sync (ignored, Google-native) but must never delete via a folder delete. */
     localUntracked: List<RelPath> = emptyList(),
@@ -428,6 +429,9 @@ internal class PlanBuilder(
         }
     }
 
+    /** The user's answer for this file, else the pair's policy. */
+    private fun policyFor(path: RelPath): ConflictPolicy = resolutions[path] ?: settings.conflictPolicy
+
     private fun refreshBase(c: FileCase) {
         if (c.baseIsStale) add(Link(c.path, c.l, c.r))
     }
@@ -438,7 +442,7 @@ internal class PlanBuilder(
         kind: ConflictKind,
         restore: SyncAction,
     ) {
-        if (settings.conflictPolicy == ConflictPolicy.ASK) {
+        if (policyFor(c.path) == ConflictPolicy.ASK) {
             conflicts += Conflict(c.path, kind, ConflictResolution.PENDING)
         } else {
             add(restore)
@@ -452,7 +456,7 @@ internal class PlanBuilder(
             return
         }
         val kind = if (c.base == null) ConflictKind.BOTH_NEW else ConflictKind.BOTH_MODIFIED
-        when (settings.conflictPolicy) {
+        when (policyFor(c.path)) {
             ConflictPolicy.KEEP_BOTH -> {
                 keepBothTwoWay(c, kind)
             }
@@ -523,7 +527,7 @@ internal class PlanBuilder(
                 sourceModified == Change.MODIFIED -> ConflictKind.BOTH_MODIFIED
                 else -> ConflictKind.DESTINATION_MODIFIED
             }
-        if (settings.conflictPolicy == ConflictPolicy.ASK) {
+        if (policyFor(c.path) == ConflictPolicy.ASK) {
             conflicts += Conflict(c.path, kind, ConflictResolution.PENDING)
             return
         }
