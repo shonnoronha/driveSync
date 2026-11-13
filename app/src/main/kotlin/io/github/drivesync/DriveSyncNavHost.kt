@@ -51,6 +51,12 @@ fun DriveSyncNavHost(
             nav,
             startDestination = if (signedIn) Routes.HOME else Routes.ONBOARDING,
             modifier = Modifier.padding(padding).consumeWindowInsets(padding),
+            enterTransition = Transitions.enter,
+            exitTransition = Transitions.exit,
+            popEnterTransition = Transitions.popEnter,
+            popExitTransition = Transitions.popExit,
+            predictivePopEnterTransition = Transitions.predictivePopEnter,
+            predictivePopExitTransition = Transitions.predictivePopExit,
         ) {
             composable(Routes.ONBOARDING) {
                 OnboardingRoute(
