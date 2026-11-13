@@ -14,6 +14,8 @@ private val GENERATED_CLASSES =
         "*_Factory",
         "*_Factory\$*",
         "*_MembersInjector",
+        "*_Impl",
+        "*_Impl\$*",
         "*_HiltModules*",
         "*_Provide*Factory*",
         "Hilt_*",
