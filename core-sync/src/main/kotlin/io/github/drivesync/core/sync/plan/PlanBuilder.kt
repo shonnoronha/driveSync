@@ -129,20 +129,24 @@ private class SurvivorIndex(
 internal class PlanBuilder(
     local: List<LocalEntry>,
     remote: List<RemoteEntry>,
-    base: BaseSnapshot?,
-    private val settings: PairSettings,
-    stamp: ConflictStamp,
-    private val resolutions: Map<RelPath, ConflictPolicy>,
+    /** Base, settings, conflict stamp and per-file conflict answers; its snapshots are ignored here. */
+    input: PlanInput,
     preSkipped: List<Skipped>,
     /** Paths the planner does not sync (ignored, Google-native) but must never delete via a folder delete. */
     localUntracked: List<RelPath> = emptyList(),
     remoteUntracked: List<RelPath> = emptyList(),
 ) {
+    private val settings: PairSettings = input.settings
+    private val resolutions: Map<RelPath, ConflictPolicy> = input.resolutions
     private val direction = settings.direction
     private val uploadsAllowed = direction != SyncDirection.DOWNLOAD_ONLY
     private val downloadsAllowed = direction != SyncDirection.UPLOAD_ONLY
     private val localByPath = local.associateBy { it.path }
-    private val baseByPath = base?.entries.orEmpty().associateBy { it.path }
+    private val baseByPath =
+        input.base
+            ?.entries
+            .orEmpty()
+            .associateBy { it.path }
     private val remoteByPath = HashMap<RelPath, RemoteEntry>()
     private val remoteDuplicates = HashMap<RelPath, List<RemoteEntry>>()
 
@@ -177,7 +181,7 @@ internal class PlanBuilder(
         localUntracked.forEach(localAfter::pin)
         remoteUntracked.forEach(remoteAfter::pin)
         remoteMixedKinds.forEach(remoteAfter::pin)
-        namer = ConflictNamer(stamp, localByPath.keys + groups.keys + baseByPath.keys + remoteUntracked)
+        namer = ConflictNamer(input.conflictStamp, localByPath.keys + groups.keys + baseByPath.keys + remoteUntracked)
     }
 
     fun build(): SyncPlan {

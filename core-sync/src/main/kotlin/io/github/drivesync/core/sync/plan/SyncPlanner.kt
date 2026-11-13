@@ -43,10 +43,7 @@ object SyncPlanner {
             PlanBuilder(
                 local = local,
                 remote = remote,
-                base = input.base,
-                settings = input.settings,
-                stamp = input.conflictStamp,
-                resolutions = input.resolutions,
+                input = input,
                 preSkipped = googleNative.map { Skipped(it.path, SkipReason.GOOGLE_NATIVE) },
                 localUntracked = localIgnored.map { it.path },
                 remoteUntracked = (remoteIgnored + googleNative).map { it.path },
