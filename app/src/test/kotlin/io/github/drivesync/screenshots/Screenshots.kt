@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
+import com.github.takahirom.roborazzi.RoborazziOptions
+import com.github.takahirom.roborazzi.ThresholdValidator
 import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.drivesync.core.ui.theme.DriveSyncTheme
 import io.github.drivesync.core.ui.theme.SeedColors
@@ -34,6 +36,14 @@ abstract class Screenshots {
         compose.setContent {
             DriveSyncTheme(darkTheme = dark, dynamicColor = false, seedColor = seed, amoled = amoled, content = content)
         }
-        compose.onRoot().captureRoboImage("screenshots/$name.png")
+        compose.onRoot().captureRoboImage("screenshots/$name.png", roborazziOptions = OPTIONS)
+    }
+
+    private companion object {
+        /** Up to 0.5% of pixels may differ: anti-aliasing varies a little between machines. */
+        val OPTIONS =
+            RoborazziOptions(
+                compareOptions = RoborazziOptions.CompareOptions(resultValidator = ThresholdValidator(0.005f)),
+            )
     }
 }

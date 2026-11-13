@@ -19,6 +19,12 @@ android {
         }
     }
     testOptions.unitTests.isIncludeAndroidResources = true
+    testOptions.unitTests.all {
+        // Screenshots show clock times: render them in one timezone and locale on every machine.
+        it.systemProperty("user.timezone", "UTC")
+        it.systemProperty("user.language", "en")
+        it.systemProperty("user.country", "US")
+    }
 }
 
 roborazzi {

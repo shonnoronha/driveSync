@@ -39,6 +39,14 @@ jobs:
       - name: Screenshot comparison
         run: ./gradlew :app:verifyRoborazziDebug
 
+      # Name each screen that changed in an annotation, so it is visible without opening the logs.
+      - name: List changed screenshots
+        if: failure()
+        run: |
+          find app/build/outputs/roborazzi -name '*_compare.png' -printf '%f\n' | sort | while read -r f; do
+            echo "::error title=Screenshot changed::$f (see the reports artifact for the diff)"
+          done
+
       - name: Upload APKs
         uses: actions/upload-artifact@v5
         with:
