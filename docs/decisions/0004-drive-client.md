@@ -74,6 +74,10 @@ Kover now also gates `core-drive` (debug unit tests; 70% minimum). Two parts are
 - `di`, the Hilt module.
 
 ## Not verified yet
-- Nothing has run against real Drive. The PRD's Phase 0 question is still open: can `drive.file` see files that
-  this app uploaded from another phone? That needs a device and a real OAuth client.
+- Nothing has run against real Drive yet; that needs a device and a real OAuth client.
+
+## Answered
+- **Phase 0 visibility question (PRD 6.4):** files this app uploads from one phone **are** visible to it on the
+  user's other phones under `drive.file` (answered by the project owner, 2026-11-13). Multi-device sync through
+  the Drive Sync root works as designed.
 - The exact `401` and consent behaviour of `AuthorizationClient` on a device.
