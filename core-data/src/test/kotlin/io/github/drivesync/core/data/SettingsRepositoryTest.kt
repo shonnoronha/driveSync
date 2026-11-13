@@ -3,6 +3,7 @@ package io.github.drivesync.core.data
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import io.github.drivesync.core.data.settings.AppSettings
 import io.github.drivesync.core.data.settings.SettingsRepository
+import io.github.drivesync.core.data.settings.ThemeMode
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -33,7 +34,11 @@ class SettingsRepositoryTest {
             repo.setNetworkRules(wifiOnly = true, chargingOnly = true)
             repo.setDeviceName("  Pixel 9 ")
             repo.setLogRetentionDays(7)
-            assertEquals(AppSettings("me@example.com", "root-id", 60, true, true, "Pixel 9", 7), repo.current())
+            repo.setTheme(ThemeMode.DARK, dynamicColor = false)
+            assertEquals(
+                AppSettings("me@example.com", "root-id", 60, true, true, "Pixel 9", 7, ThemeMode.DARK, false),
+                repo.current(),
+            )
             repo.setAccount(null, null)
             repo.setDeviceName(" ")
             assertEquals(null, repo.current().accountEmail)

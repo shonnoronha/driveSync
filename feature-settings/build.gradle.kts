@@ -5,4 +5,5 @@ plugins {
 dependencies {
     implementation(project(":core-work"))
     implementation(project(":core-drive"))
+    implementation(project(":core-local-storage"))
 }

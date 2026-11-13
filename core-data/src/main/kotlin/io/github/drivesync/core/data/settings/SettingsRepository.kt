@@ -23,6 +23,9 @@ data class AppSettings(
     /** Used in conflict-copy names; null means the device model. */
     val deviceName: String? = null,
     val logRetentionDays: Int = DEFAULT_LOG_RETENTION_DAYS,
+    val theme: ThemeMode = ThemeMode.SYSTEM,
+    /** Material You colors from the wallpaper (Android 12+). */
+    val dynamicColor: Boolean = true,
 ) {
     companion object {
         const val MIN_INTERVAL_MINUTES = 15
@@ -31,6 +34,8 @@ data class AppSettings(
         const val DEFAULT_LOG_RETENTION_DAYS = 30
     }
 }
+
+enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
 class SettingsRepository
     @Inject
@@ -47,6 +52,9 @@ class SettingsRepository
                     chargingOnly = p[CHARGING_ONLY] ?: false,
                     deviceName = p[DEVICE_NAME],
                     logRetentionDays = p[LOG_RETENTION] ?: AppSettings.DEFAULT_LOG_RETENTION_DAYS,
+                    theme =
+                        p[THEME]?.let { name -> ThemeMode.entries.firstOrNull { it.name == name } } ?: ThemeMode.SYSTEM,
+                    dynamicColor = p[DYNAMIC_COLOR] ?: true,
                 )
             }
 
@@ -78,6 +86,14 @@ class SettingsRepository
 
         suspend fun setLogRetentionDays(days: Int) = store.edit { it[LOG_RETENTION] = days.coerceAtLeast(1) }
 
+        suspend fun setTheme(
+            theme: ThemeMode,
+            dynamicColor: Boolean,
+        ) = store.edit {
+            it[THEME] = theme.name
+            it[DYNAMIC_COLOR] = dynamicColor
+        }
+
         /** FR-A5: sign out clears every setting. */
         suspend fun clear() = store.edit { it.clear() }
 
@@ -96,5 +112,7 @@ class SettingsRepository
             val CHARGING_ONLY = booleanPreferencesKey("charging_only")
             val DEVICE_NAME = stringPreferencesKey("device_name")
             val LOG_RETENTION = intPreferencesKey("log_retention_days")
+            val THEME = stringPreferencesKey("theme")
+            val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         }
     }

@@ -58,6 +58,9 @@ internal fun Project.configureKotlinJvmTarget() {
 internal fun Project.configureUnitTests() {
     tasks.withType<Test>().configureEach {
         useJUnitPlatform()
+        // Android release unit tests repeat the debug ones (Robolectric included) and double memory use;
+        // coverage is measured on debug only.
+        if (name == "testReleaseUnitTest") enabled = false
     }
     dependencies {
         add("testImplementation", platform(libs.lib("junit-bom")))

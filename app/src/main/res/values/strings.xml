@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Drive Sync</string>
-    <string name="placeholder_home">Drive Sync skeleton</string>
 </resources>
