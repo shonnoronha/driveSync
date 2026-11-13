@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_title">Drive Sync</string>
+    <string name="home_add_folder">Add folder</string>
+    <string name="home_sync_all">Sync all now</string>
+    <string name="home_conflicts">Conflicts</string>
+    <string name="home_activity">Activity</string>
+    <string name="home_settings">Settings</string>
+    <string name="home_empty_title">No folders yet</string>
+    <string name="home_empty_body">Pick a folder on your phone. It gets its own folder inside \"Drive Sync\" in your Google Drive, and the two stay in sync.</string>
+    <string name="pair_sync_now">Sync now</string>
+    <string name="pair_fix">Review</string>
+    <string name="pair_never_synced">Not synced yet</string>
+    <string name="pair_last_synced">Synced %1$s</string>
+    <string name="pair_phone_path">Phone/%1$s</string>
+    <string name="pair_phone_sd_path">SD card/%1$s</string>
+    <string name="pair_drive_path">Drive Sync/%1$s</string>
+    <string name="status_up_to_date">Up to date</string>
+    <string name="status_syncing">Syncing</string>
+    <string name="status_needs_attention">Needs attention</string>
+    <string name="status_confirm_deletes">Confirm deletes</string>
+    <string name="status_errors">Some files failed</string>
+    <string name="status_paused">Paused</string>
+    <string name="direction_two_way">Two-way</string>
+    <string name="direction_upload_only">Phone → Drive</string>
+    <string name="direction_download_only">Drive → Phone</string>
+</resources>

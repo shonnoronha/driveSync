@@ -21,6 +21,7 @@ internal fun Project.configureAndroidApplication(extension: ApplicationExtension
         defaultConfig.targetSdk = libs.versionInt("targetSdk")
         compileOptions.sourceCompatibility = JAVA_VERSION
         compileOptions.targetCompatibility = JAVA_VERSION
+        testOptions.unitTests.all { it.configureRobolectricJvm() }
     }
     configureKotlinJvmTarget()
     configureUnitTests()
@@ -33,15 +34,18 @@ internal fun Project.configureAndroidLibrary(extension: LibraryExtension) {
         defaultConfig.minSdk = libs.versionInt("minSdk")
         compileOptions.sourceCompatibility = JAVA_VERSION
         compileOptions.targetCompatibility = JAVA_VERSION
-        testOptions.unitTests.all {
-            // Robolectric may run here: cap the test JVM so builds stay clear of the OOM killer on low-RAM machines.
-            it.maxHeapSize = "1g"
-            // Robolectric reaches into FileDescriptor internals, which JDK 17+ closes by default.
-            it.jvmArgs("--add-opens=java.base/java.io=ALL-UNNAMED", "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED")
-        }
+        testOptions.unitTests.all { it.configureRobolectricJvm() }
     }
     configureKotlinJvmTarget()
     configureUnitTests()
+}
+
+/** Robolectric may run in any Android unit test. */
+private fun Test.configureRobolectricJvm() {
+    // Capped so builds stay clear of the OOM killer on low-RAM machines.
+    maxHeapSize = "1g"
+    // Robolectric reaches into FileDescriptor internals, which JDK 17+ closes by default.
+    jvmArgs("--add-opens=java.base/java.io=ALL-UNNAMED", "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED")
 }
 
 internal fun Project.configureKotlinJvmTarget() {

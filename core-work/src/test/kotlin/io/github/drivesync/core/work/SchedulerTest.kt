@@ -56,6 +56,8 @@ class SchedulerTest {
         scheduler.syncNow()
         val info = unique(SyncScheduler.NOW_PREFIX + "p1").single()
         assertEquals(NetworkType.CONNECTED, info.constraints.requiredNetworkType)
+        assertEquals("p1", SyncScheduler.pairIdOf(info.tags))
+        assertEquals(null, SyncScheduler.pairIdOf(unique(SyncScheduler.NOW_PREFIX + "all").single().tags))
         assertEquals(1, unique(SyncScheduler.NOW_PREFIX + "all").size)
     }
 

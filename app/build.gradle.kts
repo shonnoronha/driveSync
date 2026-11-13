@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.drivesync.android.application)
     alias(libs.plugins.drivesync.android.compose)
     alias(libs.plugins.drivesync.hilt)
+    alias(libs.plugins.roborazzi)
 }
 
 android {
@@ -17,6 +18,13 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
+    testOptions.unitTests.isIncludeAndroidResources = true
+}
+
+roborazzi {
+    // Screen images live in the repo: `./gradlew :app:recordRoborazziDebug` updates them,
+    // `./gradlew :app:verifyRoborazziDebug` fails when a screen changed unexpectedly.
+    outputDir.set(file("screenshots"))
 }
 
 dependencies {
@@ -32,4 +40,13 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.hilt.work)
+
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.junit4)
+    testRuntimeOnly(libs.junit.vintage.engine)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

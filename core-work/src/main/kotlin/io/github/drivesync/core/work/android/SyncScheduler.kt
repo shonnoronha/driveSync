@@ -60,6 +60,7 @@ class SyncScheduler
                     .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                     .setInputData(data)
                     .addTag(TAG)
+                    .apply { if (pairId != null) addTag(PAIR_TAG_PREFIX + pairId) }
                     .build()
             // A confirmation must not be dropped behind an ordinary queued run.
             val policy = if (deletionsConfirmed) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP
@@ -105,6 +106,11 @@ class SyncScheduler
             const val PERIODIC = "sync-periodic"
             const val MEDIA = "sync-media"
             const val NOW_PREFIX = "sync-now-"
+            private const val PAIR_TAG_PREFIX = "pair:"
+
+            /** The pair a one-pair run belongs to, from its WorkInfo tags; null for all-pairs runs. */
+            fun pairIdOf(tags: Set<String>): String? =
+                tags.firstOrNull { it.startsWith(PAIR_TAG_PREFIX) }?.removePrefix(PAIR_TAG_PREFIX)
 
             /** Waiting for MediaStore to settle doubles as the stability check for camera files (PRD 3.6). */
             val MEDIA_SETTLE: Duration = Duration.ofSeconds(30)
