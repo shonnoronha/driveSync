@@ -10,28 +10,24 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import io.github.drivesync.core.sync.model.ConflictPolicy
-import io.github.drivesync.core.sync.model.SyncDirection
+import io.github.drivesync.core.ui.components.SubTopBar
+import io.github.drivesync.core.ui.components.Sym
+import io.github.drivesync.core.ui.theme.Tokens
 import io.github.drivesync.feature.pairs.R
 
 /** Add-folder wizard (PRD 8.3, FR-P1): folder → name and Drive folder → options → review. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AddPairScreen(
     state: AddPairUiState,
@@ -41,32 +37,30 @@ fun AddPairScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.add_title)) },
-                navigationIcon = {
-                    IconButton(
-                        onClick = actions.onClose,
-                    ) { Icon(Icons.Outlined.Close, stringResource(R.string.add_close)) }
-                },
+            SubTopBar(
+                stringResource(R.string.add_title),
+                Sym.Close,
+                stringResource(R.string.add_close),
+                actions.onClose,
             )
         },
         bottomBar = { WizardButtons(state, actions) },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             val steps = AddStep.entries.size
-            LinearProgressIndicator(
+            LinearWavyProgressIndicator(
                 progress = { (state.step.ordinal + 1f) / steps },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = Tokens.pageInset + Tokens.gapXs),
             )
             Text(
                 stringResource(R.string.add_step, state.step.ordinal + 1, steps),
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 16.dp, top = 8.dp),
+                modifier = Modifier.padding(start = Tokens.pageInset + Tokens.gapXs, top = Tokens.gapSm),
             )
             Column(
-                Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(vertical = Tokens.gapLg),
+                verticalArrangement = Arrangement.spacedBy(Tokens.gapMd),
             ) {
                 when (state.step) {
                     AddStep.FOLDER -> FolderStep(state, actions)
@@ -84,26 +78,33 @@ private fun WizardButtons(
     state: AddPairUiState,
     actions: AddPairActions,
 ) {
-    Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp)) {
+    Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(Tokens.pageInset)) {
         if (AddPairRules.previous(state.step) != null) {
             TextButton(onClick = actions.onBack, enabled = !state.working) { Text(stringResource(R.string.add_back)) }
         }
         Spacer(Modifier.weight(1f))
-        Button(onClick = actions.onNext, enabled = state.canContinue) {
+        Button(onClick = actions.onNext, enabled = state.canContinue, contentPadding = ButtonPadding) {
             Text(stringResource(if (state.step == AddStep.REVIEW) R.string.add_create else R.string.add_next))
         }
     }
 }
+
+private val ButtonPadding =
+    androidx.compose.foundation.layout
+        .PaddingValues(horizontal = 28.dp, vertical = 14.dp)
 
 @Composable
 internal fun StepTitle(
     title: String,
     body: String? = null,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, style = MaterialTheme.typography.headlineSmall)
+    Column(
+        Modifier.padding(horizontal = Tokens.pageInset + Tokens.gapXs),
+        verticalArrangement = Arrangement.spacedBy(Tokens.gapSm),
+    ) {
+        Text(title, style = MaterialTheme.typography.headlineMedium)
         if (body != null) {
-            Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(body, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

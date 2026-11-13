@@ -26,12 +26,17 @@ data class AppSettings(
     val theme: ThemeMode = ThemeMode.SYSTEM,
     /** Material You colors from the wallpaper (Android 12+). */
     val dynamicColor: Boolean = true,
+    /** Accent used when [dynamicColor] is off or unavailable (ARGB). */
+    val seedColor: Int = DEFAULT_SEED_COLOR,
+    /** Pure black backgrounds in dark mode, for OLED screens. */
+    val amoled: Boolean = false,
 ) {
     companion object {
         const val MIN_INTERVAL_MINUTES = 15
         const val MAX_INTERVAL_MINUTES = 24 * 60
         const val DEFAULT_INTERVAL_MINUTES = 30
         const val DEFAULT_LOG_RETENTION_DAYS = 30
+        const val DEFAULT_SEED_COLOR = 0xFF3D7BF7.toInt()
     }
 }
 
@@ -55,6 +60,8 @@ class SettingsRepository
                     theme =
                         p[THEME]?.let { name -> ThemeMode.entries.firstOrNull { it.name == name } } ?: ThemeMode.SYSTEM,
                     dynamicColor = p[DYNAMIC_COLOR] ?: true,
+                    seedColor = p[SEED_COLOR] ?: AppSettings.DEFAULT_SEED_COLOR,
+                    amoled = p[AMOLED] ?: false,
                 )
             }
 
@@ -94,6 +101,14 @@ class SettingsRepository
             it[DYNAMIC_COLOR] = dynamicColor
         }
 
+        suspend fun setAccent(
+            seedColor: Int,
+            amoled: Boolean,
+        ) = store.edit {
+            it[SEED_COLOR] = seedColor
+            it[AMOLED] = amoled
+        }
+
         /** FR-A5: sign out clears every setting. */
         suspend fun clear() = store.edit { it.clear() }
 
@@ -114,5 +129,7 @@ class SettingsRepository
             val LOG_RETENTION = intPreferencesKey("log_retention_days")
             val THEME = stringPreferencesKey("theme")
             val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
+            val SEED_COLOR = intPreferencesKey("seed_color")
+            val AMOLED = booleanPreferencesKey("amoled")
         }
     }

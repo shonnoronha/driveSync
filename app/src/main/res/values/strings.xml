@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Drive Sync</string>
+    <string name="tab_folders">Folders</string>
+    <string name="tab_conflicts">Conflicts</string>
+    <string name="tab_activity">Activity</string>
+    <string name="tab_settings">Settings</string>
 </resources>

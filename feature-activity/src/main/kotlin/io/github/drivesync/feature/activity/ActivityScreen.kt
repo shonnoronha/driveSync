@@ -2,32 +2,32 @@ package io.github.drivesync.feature.activity
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.drivesync.core.ui.components.EmptyState
+import io.github.drivesync.core.ui.components.LoadingState
+import io.github.drivesync.core.ui.components.RootTopBar
+import io.github.drivesync.core.ui.components.SettingsGroup
+import io.github.drivesync.core.ui.components.SettingsSectionHeader
+import io.github.drivesync.core.ui.components.Sym
+import io.github.drivesync.core.ui.components.SymIcon
+import io.github.drivesync.core.ui.theme.Tokens
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -37,32 +37,23 @@ import java.time.format.FormatStyle
 fun ActivityScreen(
     state: ActivityUiState,
     onFilter: (ActivityFilter) -> Unit,
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
-        modifier = modifier,
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.activity_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.activity_back))
-                    }
-                },
-            )
-        },
+        modifier = modifier.nestedScroll(scroll.nestedScrollConnection),
+        topBar = { RootTopBar(stringResource(R.string.activity_title), scroll) },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             Filters(state.filter, onFilter)
             when {
                 state.loading -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                    LoadingState()
                 }
 
                 state.days.isEmpty() -> {
                     EmptyState(
-                        Icons.Outlined.History,
+                        Sym.History,
                         stringResource(R.string.activity_empty_title),
                         stringResource(R.string.activity_empty_body),
                     )
@@ -82,11 +73,24 @@ private fun Filters(
     onFilter: (ActivityFilter) -> Unit,
 ) {
     Row(
-        Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        Modifier
+            .horizontalScroll(
+                rememberScrollState(),
+            ).padding(horizontal = Tokens.pageInset, vertical = Tokens.gapXs),
+        horizontalArrangement = Arrangement.spacedBy(Tokens.gapSm),
     ) {
         ActivityFilter.entries.forEach { filter ->
-            FilterChip(selected = filter == selected, onClick = { onFilter(filter) }, label = { Text(filter.label()) })
+            val isSelected = filter == selected
+            FilterChip(
+                selected = isSelected,
+                onClick = { onFilter(filter) },
+                label = { Text(filter.label()) },
+                leadingIcon = if (isSelected) ({ SymIcon(Sym.Check, null, Modifier.padding(0.dp)) }) else null,
+                shape =
+                    androidx.compose.foundation.shape
+                        .RoundedCornerShape(Tokens.radiusControl),
+                colors = FilterChipDefaults.filterChipColors(),
+            )
         }
     }
 }
@@ -94,10 +98,10 @@ private fun Filters(
 @Composable
 private fun Timeline(state: ActivityUiState) {
     val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
-    LazyColumn {
+    LazyColumn(contentPadding = PaddingValues(bottom = Tokens.gapXl)) {
         state.days.forEach { day ->
             item(key = day.date.toString()) {
-                Text(
+                SettingsSectionHeader(
                     if (day.date ==
                         state.today
                     ) {
@@ -105,12 +109,9 @@ private fun Timeline(state: ActivityUiState) {
                     } else {
                         day.date.format(dateFormat)
                     },
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp),
                 )
+                SettingsGroup { day.rows.forEach { row -> item { ActivityRowItem(row, showPair = true) } } }
             }
-            items(day.rows, key = { it.id }) { ActivityRowItem(it, showPair = true) }
         }
     }
 }

@@ -1,6 +1,7 @@
 package io.github.drivesync.feature.activity
 
 import android.text.format.DateFormat
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,32 +9,24 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.DriveFileMove
-import androidx.compose.material.icons.outlined.CloudDownload
-import androidx.compose.material.icons.outlined.CloudUpload
-import androidx.compose.material.icons.outlined.CreateNewFolder
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Difference
-import androidx.compose.material.icons.outlined.ErrorOutline
-import androidx.compose.material.icons.outlined.PauseCircle
-import androidx.compose.material.icons.outlined.RestoreFromTrash
-import androidx.compose.material.icons.outlined.Warning
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.drivesync.core.data.db.ActivityKind
+import io.github.drivesync.core.ui.components.Sym
+import io.github.drivesync.core.ui.components.SymIcon
+import io.github.drivesync.core.ui.theme.Tokens
 import java.util.Date
 
-/** One activity line; also used by the pair detail screen. */
+/** One activity line, sized for a connected group row; also used by pair detail. */
 @Composable
 fun ActivityRowItem(
     row: ActivityRow,
@@ -41,14 +34,22 @@ fun ActivityRowItem(
     modifier: Modifier = Modifier,
 ) {
     val problem = row.kind in setOf(ActivityKind.FAILED, ActivityKind.PAUSED, ActivityKind.WAITING_FOR_CONFIRMATION)
-    Row(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.Top) {
-        Icon(
-            row.kind.icon(),
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = if (problem) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-        )
-        Spacer(Modifier.width(16.dp))
+    val scheme = MaterialTheme.colorScheme
+    Row(
+        modifier.fillMaxWidth().padding(horizontal = Tokens.gapLg, vertical = Tokens.gapMd),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = if (problem) scheme.errorContainer else scheme.secondaryContainer,
+            contentColor = if (problem) scheme.onErrorContainer else scheme.onSecondaryContainer,
+            modifier = Modifier.size(40.dp),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                SymIcon(row.kind.icon(), contentDescription = null, modifier = Modifier.size(20.dp))
+            }
+        }
+        Spacer(Modifier.width(Tokens.gapMd))
         Column(Modifier.weight(1f)) {
             Text(
                 row.path ?: row.kind.label(),
@@ -65,16 +66,16 @@ fun ActivityRowItem(
             Text(
                 subtitle.joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = scheme.onSurfaceVariant,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(Tokens.gapSm))
         Text(
             DateFormat.getTimeFormat(LocalContext.current).format(Date(row.time)),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelMedium,
+            color = scheme.onSurfaceVariant,
         )
     }
 }
@@ -96,16 +97,16 @@ fun ActivityKind.label(): String =
         },
     )
 
-private fun ActivityKind.icon(): ImageVector =
+private fun ActivityKind.icon(): Int =
     when (this) {
-        ActivityKind.UPLOADED -> Icons.Outlined.CloudUpload
-        ActivityKind.DOWNLOADED -> Icons.Outlined.CloudDownload
-        ActivityKind.MOVED -> Icons.AutoMirrored.Outlined.DriveFileMove
-        ActivityKind.FOLDER_CREATED -> Icons.Outlined.CreateNewFolder
-        ActivityKind.TRASHED_ON_DRIVE -> Icons.Outlined.Delete
-        ActivityKind.RECYCLED_ON_PHONE -> Icons.Outlined.RestoreFromTrash
-        ActivityKind.CONFLICT -> Icons.Outlined.Difference
-        ActivityKind.FAILED -> Icons.Outlined.ErrorOutline
-        ActivityKind.PAUSED -> Icons.Outlined.PauseCircle
-        ActivityKind.WAITING_FOR_CONFIRMATION -> Icons.Outlined.Warning
+        ActivityKind.UPLOADED -> Sym.CloudUpload
+        ActivityKind.DOWNLOADED -> Sym.CloudDownload
+        ActivityKind.MOVED -> Sym.DriveFileMove
+        ActivityKind.FOLDER_CREATED -> Sym.CreateNewFolder
+        ActivityKind.TRASHED_ON_DRIVE -> Sym.Delete
+        ActivityKind.RECYCLED_ON_PHONE -> Sym.RestoreFromTrash
+        ActivityKind.CONFLICT -> Sym.Difference
+        ActivityKind.FAILED -> Sym.Error
+        ActivityKind.PAUSED -> Sym.PauseCircle
+        ActivityKind.WAITING_FOR_CONFIRMATION -> Sym.Warning
     }

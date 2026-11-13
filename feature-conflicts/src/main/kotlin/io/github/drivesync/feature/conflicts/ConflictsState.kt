@@ -44,7 +44,6 @@ data class ConflictsUiState(
 
 /** Callbacks of the conflicts screen. */
 data class ConflictsActions(
-    val onBack: () -> Unit = {},
     val onChoose: (ConflictItem, ConflictPolicy) -> Unit = { _, _ -> },
 )
 

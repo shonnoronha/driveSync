@@ -1,6 +1,8 @@
 package io.github.drivesync.screenshots
 
+import androidx.compose.foundation.layout.padding
 import io.github.drivesync.core.sync.model.SyncDirection
+import io.github.drivesync.core.ui.theme.SeedColors
 import io.github.drivesync.feature.pairs.home.HomeActions
 import io.github.drivesync.feature.pairs.home.HomeScreen
 import io.github.drivesync.feature.pairs.home.HomeUiState
@@ -64,6 +66,28 @@ class HomeScreenshots : Screenshots() {
     fun homeDark() =
         snap("home_dark", dark = true) {
             HomeScreen(HomeUiState(false, pairs, conflictCount = 2, now = now), HomeActions())
+        }
+
+    @Test
+    fun homeGreenAmoled() =
+        snap("home_green_amoled", dark = true, seed = SeedColors.GREEN, amoled = true) {
+            HomeScreen(HomeUiState(false, pairs, conflictCount = 2, now = now), HomeActions())
+        }
+
+    /** The app shell: home above the expressive bottom navigation bar. */
+    @Test
+    fun shell() =
+        snap("shell") {
+            androidx.compose.material3.Scaffold(
+                bottomBar = { io.github.drivesync.BottomBar(io.github.drivesync.Routes.HOME, pendingConflicts = 3) {} },
+            ) { padding ->
+                androidx.compose.foundation.layout.Box(
+                    androidx.compose.ui.Modifier
+                        .padding(padding),
+                ) {
+                    HomeScreen(HomeUiState(false, pairs, conflictCount = 3, now = now), HomeActions())
+                }
+            }
         }
 
     @Test

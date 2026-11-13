@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.drivesync.core.ui.theme.DriveSyncTheme
+import io.github.drivesync.core.ui.theme.SeedColors
 import org.junit.Rule
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -26,9 +27,13 @@ abstract class Screenshots {
     protected fun snap(
         name: String,
         dark: Boolean = false,
+        seed: Int = SeedColors.DEFAULT,
+        amoled: Boolean = false,
         content: @Composable () -> Unit,
     ) {
-        compose.setContent { DriveSyncTheme(darkTheme = dark, dynamicColor = false, content = content) }
+        compose.setContent {
+            DriveSyncTheme(darkTheme = dark, dynamicColor = false, seedColor = seed, amoled = amoled, content = content)
+        }
         compose.onRoot().captureRoboImage("screenshots/$name.png")
     }
 }

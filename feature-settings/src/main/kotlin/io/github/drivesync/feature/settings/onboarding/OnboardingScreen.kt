@@ -1,40 +1,37 @@
 package io.github.drivesync.feature.settings.onboarding
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.BatteryChargingFull
-import androidx.compose.material.icons.outlined.CloudSync
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.RestoreFromTrash
-import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import io.github.drivesync.core.ui.components.SettingsGroup
+import io.github.drivesync.core.ui.components.SettingsRow
+import io.github.drivesync.core.ui.components.Sym
+import io.github.drivesync.core.ui.components.SymIcon
+import io.github.drivesync.core.ui.theme.Tokens
 import io.github.drivesync.feature.settings.R
 
 /** Onboarding (PRD 8.1): what the app does, Google sign-in plus the Drive Sync folder, then permissions. */
@@ -46,8 +43,8 @@ fun OnboardingScreen(
 ) {
     Surface(modifier.fillMaxSize()) {
         Column(
-            Modifier.safeDrawingPadding().verticalScroll(rememberScrollState()).padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+            Modifier.safeDrawingPadding().verticalScroll(rememberScrollState()).padding(vertical = Tokens.gapXl),
+            verticalArrangement = Arrangement.spacedBy(Tokens.gapLg),
         ) {
             when (state.step) {
                 OnboardingStep.WELCOME -> Welcome(state, actions)
@@ -58,39 +55,54 @@ fun OnboardingScreen(
     }
 }
 
+private val inset = Modifier.padding(horizontal = Tokens.pageInset + Tokens.gapXs)
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun Hero(icon: Int) {
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        shape = MaterialShapes.Cookie9Sided.toShape(),
+        modifier = inset.size(96.dp),
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+        ) { SymIcon(icon, contentDescription = null, modifier = Modifier.size(44.dp)) }
+    }
+}
+
 @Composable
 private fun Welcome(
     state: OnboardingUiState,
     actions: OnboardingActions,
 ) {
-    Spacer(Modifier.size(24.dp))
-    Icon(
-        Icons.Outlined.CloudSync,
-        contentDescription = null,
-        modifier = Modifier.size(64.dp),
-        tint = MaterialTheme.colorScheme.primary,
-    )
-    Text(stringResource(R.string.onboarding_title), style = MaterialTheme.typography.headlineMedium)
-    Point(Icons.Outlined.Folder, stringResource(R.string.onboarding_point_folders))
-    Point(Icons.Outlined.Sync, stringResource(R.string.onboarding_point_drive))
-    Point(Icons.Outlined.RestoreFromTrash, stringResource(R.string.onboarding_point_safe))
-    Point(Icons.Outlined.Lock, stringResource(R.string.onboarding_point_private))
-    state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-    Button(onClick = actions.onSignIn, modifier = Modifier.fillMaxWidth()) {
-        Text(stringResource(R.string.onboarding_sign_in))
+    Spacer(Modifier.height(Tokens.gapXl))
+    Hero(Sym.CloudSync)
+    Text(stringResource(R.string.onboarding_title), style = MaterialTheme.typography.displaySmall, modifier = inset)
+    SettingsGroup {
+        item { SettingsRow(title = stringResource(R.string.onboarding_point_folders), icon = Sym.Folder) }
+        item { SettingsRow(title = stringResource(R.string.onboarding_point_drive), icon = Sym.SyncAlt) }
+        item { SettingsRow(title = stringResource(R.string.onboarding_point_safe), icon = Sym.RestoreFromTrash) }
+        item { SettingsRow(title = stringResource(R.string.onboarding_point_private), icon = Sym.Lock) }
+    }
+    state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = inset) }
+    Button(onClick = actions.onSignIn, modifier = inset.fillMaxWidth().heightIn(min = 56.dp)) {
+        Text(stringResource(R.string.onboarding_sign_in), style = MaterialTheme.typography.titleMedium)
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun Working(state: OnboardingUiState) {
     Column(
-        Modifier.fillMaxWidth().padding(top = 160.dp),
+        Modifier.fillMaxWidth().padding(top = 200.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(20.dp),
+        verticalArrangement = Arrangement.spacedBy(Tokens.gapXl),
     ) {
-        CircularProgressIndicator()
+        LoadingIndicator(Modifier.size(72.dp))
         val text = if (state.settingUpDrive) R.string.onboarding_working_drive else R.string.onboarding_working_sign_in
-        Text(stringResource(text), style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(text), style = MaterialTheme.typography.titleLarge)
     }
 }
 
@@ -99,74 +111,55 @@ private fun Permissions(
     state: OnboardingUiState,
     actions: OnboardingActions,
 ) {
-    Spacer(Modifier.size(24.dp))
-    Text(stringResource(R.string.onboarding_permissions_title), style = MaterialTheme.typography.headlineMedium)
+    Spacer(Modifier.height(Tokens.gapXl))
+    Hero(Sym.Notifications)
+    Text(
+        stringResource(R.string.onboarding_permissions_title),
+        style = MaterialTheme.typography.displaySmall,
+        modifier = inset,
+    )
     state.accountEmail?.let {
         Text(
             stringResource(R.string.onboarding_signed_in_as, it),
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = inset,
         )
     }
-    PermissionCard(
-        Icons.Outlined.Notifications,
-        stringResource(R.string.onboarding_notifications),
-        stringResource(R.string.onboarding_notifications_body),
-    ) {
-        if (state.notificationsAllowed) {
-            OutlinedButton(
-                onClick = {},
-                enabled = false,
-            ) { Text(stringResource(R.string.onboarding_notifications_allowed)) }
-        } else {
-            FilledTonalButton(onClick = actions.onAllowNotifications) {
-                Text(stringResource(R.string.onboarding_notifications_allow))
-            }
+    SettingsGroup {
+        item {
+            SettingsRow(
+                title = stringResource(R.string.onboarding_notifications),
+                subtitle = stringResource(R.string.onboarding_notifications_body),
+                icon = Sym.Notifications,
+                footer = {
+                    if (state.notificationsAllowed) {
+                        FilledTonalButton(
+                            onClick = {},
+                            enabled = false,
+                        ) { Text(stringResource(R.string.onboarding_notifications_allowed)) }
+                    } else {
+                        FilledTonalButton(onClick = actions.onAllowNotifications) {
+                            Text(stringResource(R.string.onboarding_notifications_allow))
+                        }
+                    }
+                },
+            )
+        }
+        item {
+            SettingsRow(
+                title = stringResource(R.string.onboarding_battery),
+                subtitle = stringResource(R.string.onboarding_battery_body),
+                icon = Sym.Battery,
+                footer = {
+                    FilledTonalButton(
+                        onClick = actions.onOpenBatterySettings,
+                    ) { Text(stringResource(R.string.onboarding_battery_open)) }
+                },
+            )
         }
     }
-    PermissionCard(
-        Icons.Outlined.BatteryChargingFull,
-        stringResource(R.string.onboarding_battery),
-        stringResource(R.string.onboarding_battery_body),
-    ) {
-        OutlinedButton(
-            onClick = actions.onOpenBatterySettings,
-        ) { Text(stringResource(R.string.onboarding_battery_open)) }
-    }
-    Button(
-        onClick = actions.onDone,
-        modifier = Modifier.fillMaxWidth(),
-    ) { Text(stringResource(R.string.onboarding_done)) }
-}
-
-@Composable
-private fun Point(
-    icon: ImageVector,
-    text: String,
-) {
-    Row(verticalAlignment = Alignment.Top) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.width(16.dp))
-        Text(text, style = MaterialTheme.typography.bodyLarge)
-    }
-}
-
-@Composable
-private fun PermissionCard(
-    icon: ImageVector,
-    title: String,
-    body: String,
-    action: @Composable () -> Unit,
-) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = null)
-                Spacer(Modifier.width(12.dp))
-                Text(title, style = MaterialTheme.typography.titleMedium)
-            }
-            Text(body, style = MaterialTheme.typography.bodyMedium)
-            action()
-        }
+    Button(onClick = actions.onDone, modifier = inset.fillMaxWidth().heightIn(min = 56.dp)) {
+        Text(stringResource(R.string.onboarding_done), style = MaterialTheme.typography.titleMedium)
     }
 }

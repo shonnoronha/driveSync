@@ -35,8 +35,21 @@ class SettingsRepositoryTest {
             repo.setDeviceName("  Pixel 9 ")
             repo.setLogRetentionDays(7)
             repo.setTheme(ThemeMode.DARK, dynamicColor = false)
+            repo.setAccent(0xFF00FF00.toInt(), amoled = true)
             assertEquals(
-                AppSettings("me@example.com", "root-id", 60, true, true, "Pixel 9", 7, ThemeMode.DARK, false),
+                AppSettings(
+                    "me@example.com",
+                    "root-id",
+                    60,
+                    true,
+                    true,
+                    "Pixel 9",
+                    7,
+                    ThemeMode.DARK,
+                    false,
+                    0xFF00FF00.toInt(),
+                    true,
+                ),
                 repo.current(),
             )
             repo.setAccount(null, null)

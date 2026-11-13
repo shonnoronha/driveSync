@@ -48,10 +48,7 @@ class ActivityViewModel
     }
 
 @Composable
-fun ActivityRoute(
-    onBack: () -> Unit,
-    viewModel: ActivityViewModel = hiltViewModel(),
-) {
+fun ActivityRoute(viewModel: ActivityViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    ActivityScreen(state, viewModel::setFilter, onBack)
+    ActivityScreen(state, viewModel::setFilter)
 }

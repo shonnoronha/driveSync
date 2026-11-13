@@ -54,7 +54,6 @@ class DetailScreenshots : Screenshots() {
                     today = today,
                 ),
                 {},
-                {},
             )
         }
 

@@ -13,12 +13,12 @@ data class SettingsUiState(
 
 /** Callbacks of the settings screen. */
 data class SettingsActions(
-    val onBack: () -> Unit = {},
     val onSignOut: () -> Unit = {},
     val onInterval: (Int) -> Unit = {},
     val onNetworkRules: (wifiOnly: Boolean, chargingOnly: Boolean) -> Unit = { _, _ -> },
     val onDeviceName: (String) -> Unit = {},
     val onTheme: (ThemeMode, Boolean) -> Unit = { _, _ -> },
+    val onAccent: (seedColor: Int, amoled: Boolean) -> Unit = { _, _ -> },
     val onLogRetention: (Int) -> Unit = {},
     val onOpenNotifications: () -> Unit = {},
     val onOpenBattery: () -> Unit = {},

@@ -5,37 +5,37 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import io.github.drivesync.core.sync.model.ConflictPolicy
 import io.github.drivesync.core.sync.plan.ConflictKind
 import io.github.drivesync.core.sync.plan.ConflictResolution
+import io.github.drivesync.core.ui.components.ConnectedToggleGroup
+import io.github.drivesync.core.ui.components.DsCard
 import io.github.drivesync.core.ui.components.EmptyState
+import io.github.drivesync.core.ui.components.IconTile
+import io.github.drivesync.core.ui.components.LoadingState
+import io.github.drivesync.core.ui.components.RootTopBar
+import io.github.drivesync.core.ui.components.SettingsGroup
+import io.github.drivesync.core.ui.components.SettingsRow
+import io.github.drivesync.core.ui.components.SettingsSectionHeader
+import io.github.drivesync.core.ui.components.Sym
+import io.github.drivesync.core.ui.theme.Tokens
 
 /** Conflicts (PRD 8.5): pending ones need a choice; the rest show what the last sync did. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,28 +45,20 @@ fun ConflictsScreen(
     actions: ConflictsActions,
     modifier: Modifier = Modifier,
 ) {
+    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
-        modifier = modifier,
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.conflicts_title)) },
-                navigationIcon = {
-                    IconButton(onClick = actions.onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.conflicts_back))
-                    }
-                },
-            )
-        },
+        modifier = modifier.nestedScroll(scroll.nestedScrollConnection),
+        topBar = { RootTopBar(stringResource(R.string.conflicts_title), scroll) },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when {
                 state.loading -> {
-                    CircularProgressIndicator(Modifier.align(Alignment.Center))
+                    LoadingState()
                 }
 
                 state.pending.isEmpty() && state.resolved.isEmpty() -> {
                     EmptyState(
-                        Icons.Outlined.CheckCircle,
+                        Sym.CheckCircle,
                         stringResource(R.string.conflicts_empty_title),
                         stringResource(R.string.conflicts_empty_body),
                         Modifier.align(Alignment.Center),
@@ -86,21 +78,32 @@ private fun ConflictList(
     state: ConflictsUiState,
     actions: ConflictsActions,
 ) {
-    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(
+        contentPadding = PaddingValues(bottom = Tokens.gapXl),
+        verticalArrangement = Arrangement.spacedBy(Tokens.gapMd),
+    ) {
         if (state.pending.isNotEmpty()) {
-            item { Header(stringResource(R.string.conflicts_pending)) }
+            item { SettingsSectionHeader(stringResource(R.string.conflicts_pending)) }
             items(state.pending, key = { "p:${it.pairId}:${it.path}" }) { PendingCard(it, actions) }
         }
         if (state.resolved.isNotEmpty()) {
-            item { Header(stringResource(R.string.conflicts_resolved)) }
-            items(state.resolved, key = { "r:${it.pairId}:${it.path}" }) { ResolvedCard(it) }
+            item {
+                SettingsSectionHeader(stringResource(R.string.conflicts_resolved))
+                SettingsGroup {
+                    state.resolved.forEach { conflict ->
+                        item {
+                            SettingsRow(
+                                title = conflict.path,
+                                subtitle = "${conflict.pairName} · ${conflict.resolutionText()}",
+                                icon = Sym.CheckCircle,
+                                iconTint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
-}
-
-@Composable
-private fun Header(text: String) {
-    Text(text, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
 }
 
 @Composable
@@ -108,19 +111,26 @@ private fun PendingCard(
     item: ConflictItem,
     actions: ConflictsActions,
 ) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            FileTitle(item)
+    DsCard(Modifier.padding(horizontal = Tokens.pageInset)) {
+        Column(Modifier.padding(Tokens.rowPaddingH), verticalArrangement = Arrangement.spacedBy(Tokens.gapMd)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val scheme = MaterialTheme.colorScheme
+                IconTile(Sym.Difference, container = scheme.tertiaryContainer, content = scheme.onTertiaryContainer)
+                Spacer(Modifier.width(Tokens.gapMd))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        item.path,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(item.pairName, style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
+                }
+            }
             Text(item.kind.label(), style = MaterialTheme.typography.bodyMedium)
             if (item.choices.isNotEmpty()) {
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    item.choices.forEachIndexed { index, choice ->
-                        SegmentedButton(
-                            selected = item.chosen == choice,
-                            onClick = { actions.onChoose(item, choice) },
-                            shape = SegmentedButtonDefaults.itemShape(index, item.choices.size),
-                        ) { Text(choice.label(item.choices.size == 1), maxLines = 1) }
-                    }
+                ConnectedToggleGroup(item.choices, item.chosen, { actions.onChoose(item, it) }) {
+                    Text(it.label(item.choices.size == 1), maxLines = 1)
                 }
             }
             item.chosen?.let {
@@ -132,39 +142,6 @@ private fun PendingCard(
             }
         }
     }
-}
-
-@Composable
-private fun ResolvedCard(item: ConflictItem) {
-    OutlinedCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            FileTitle(item)
-            Text(
-                item.kind.label(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(item.resolutionText(), style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-}
-
-@Composable
-private fun FileTitle(item: ConflictItem) {
-    Row {
-        Text(
-            item.path,
-            style = MaterialTheme.typography.titleMedium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-    }
-    Text(
-        item.pairName,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
 }
 
 @Composable

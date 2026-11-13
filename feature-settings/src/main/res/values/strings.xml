@@ -50,4 +50,13 @@
     <string name="settings_minutes">%1$d minutes</string>
     <string name="settings_hours">%1$d hours</string>
     <string name="settings_hour">1 hour</string>
+    <string name="settings_signed_in">Signed in to Google Drive</string>
+    <string name="settings_accent">Accent color</string>
+    <string name="settings_amoled">Pure black</string>
+    <string name="settings_amoled_body">Black backgrounds in dark mode, for OLED screens.</string>
+    <string name="settings_dynamic_color_body">Match the colors of your wallpaper.</string>
+    <string name="settings_device_name_dialog">Device name</string>
+    <string name="settings_save">Save</string>
+    <string name="settings_notifications_body">Errors, conflicts and sync progress</string>
+    <string name="settings_battery_body">Let syncs run in the background</string>
 </resources>

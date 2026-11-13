@@ -29,8 +29,18 @@ class MainActivity : ComponentActivity() {
                     ThemeMode.LIGHT -> false
                     ThemeMode.DARK -> true
                 }
-            DriveSyncTheme(darkTheme = dark, dynamicColor = loaded.dynamicColor) {
-                DriveSyncNavHost(rememberNavController(), signedIn = loaded.accountEmail != null)
+            DriveSyncTheme(
+                darkTheme = dark,
+                dynamicColor = loaded.dynamicColor,
+                seedColor = loaded.seedColor,
+                amoled = loaded.amoled,
+            ) {
+                val conflicts by viewModel.pendingConflicts.collectAsStateWithLifecycle()
+                DriveSyncNavHost(
+                    rememberNavController(),
+                    signedIn = loaded.accountEmail != null,
+                    pendingConflicts = conflicts,
+                )
             }
         }
     }

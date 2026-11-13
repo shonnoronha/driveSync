@@ -4,28 +4,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CreateNewFolder
-import androidx.compose.material.icons.outlined.ErrorOutline
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,9 +21,21 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import io.github.drivesync.core.sync.model.ConflictPolicy
 import io.github.drivesync.core.sync.model.SyncDirection
+import io.github.drivesync.core.ui.components.DsCard
+import io.github.drivesync.core.ui.components.DsTextField
+import io.github.drivesync.core.ui.components.IconTile
+import io.github.drivesync.core.ui.components.SettingsGroup
+import io.github.drivesync.core.ui.components.SettingsRow
+import io.github.drivesync.core.ui.components.SettingsSectionHeader
+import io.github.drivesync.core.ui.components.SettingsSwitchRow
+import io.github.drivesync.core.ui.components.Sym
+import io.github.drivesync.core.ui.components.SymIcon
+import io.github.drivesync.core.ui.theme.Tokens
 import io.github.drivesync.feature.pairs.R
 import io.github.drivesync.feature.pairs.home.icon
 import io.github.drivesync.feature.pairs.home.label
+
+private val inset = Modifier.padding(horizontal = Tokens.pageInset)
 
 @Composable
 internal fun FolderStep(
@@ -44,28 +43,30 @@ internal fun FolderStep(
     actions: AddPairActions,
 ) {
     StepTitle(stringResource(R.string.add_folder_title), stringResource(R.string.add_folder_body))
-    if (state.treeUri == null) {
-        OutlinedCard(onClick = actions.onPickFolder, modifier = Modifier.fillMaxWidth()) {
-            Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Outlined.CreateNewFolder,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-                Spacer(Modifier.width(16.dp))
-                Text(stringResource(R.string.add_folder_pick), style = MaterialTheme.typography.titleMedium)
+    val picked = state.treeUri != null
+    DsCard(inset, onClick = actions.onPickFolder) {
+        Row(Modifier.padding(Tokens.rowPaddingH), verticalAlignment = Alignment.CenterVertically) {
+            IconTile(if (picked) Sym.FolderFilled else Sym.CreateNewFolder)
+            Spacer(Modifier.width(Tokens.gapLg))
+            Column(Modifier.weight(1f)) {
+                val title =
+                    if (picked) {
+                        (if (state.onInternalStorage) "" else "SD card/") + state.folderPath.orEmpty()
+                    } else {
+                        stringResource(
+                            R.string.add_folder_pick,
+                        )
+                    }
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                if (picked) {
+                    Text(
+                        stringResource(R.string.add_folder_change),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
         }
-    } else {
-        Card(Modifier.fillMaxWidth()) {
-            Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(16.dp))
-                val prefix = if (state.onInternalStorage) "Phone/" else "SD card/"
-                Text(prefix + state.folderPath.orEmpty(), style = MaterialTheme.typography.titleMedium)
-            }
-        }
-        TextButton(onClick = actions.onPickFolder) { Text(stringResource(R.string.add_folder_change)) }
     }
     state.problems.forEach { ProblemCard(it) }
 }
@@ -78,16 +79,11 @@ private fun ProblemCard(problem: FolderProblem) {
             FolderProblem.UnsupportedProvider -> stringResource(R.string.add_problem_provider)
             is FolderProblem.GrantLimitNear -> stringResource(R.string.add_problem_grants, problem.used)
         }
-    val colors =
-        if (problem.blocking) {
-            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
-        } else {
-            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
-        }
-    Card(colors = colors, modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.padding(16.dp)) {
-            Icon(if (problem.blocking) Icons.Outlined.ErrorOutline else Icons.Outlined.Info, contentDescription = null)
-            Spacer(Modifier.width(12.dp))
+    val scheme = MaterialTheme.colorScheme
+    DsCard(inset, container = if (problem.blocking) scheme.errorContainer else scheme.tertiaryContainer) {
+        Row(Modifier.padding(Tokens.rowPaddingH)) {
+            SymIcon(if (problem.blocking) Sym.Error else Sym.Info, contentDescription = null)
+            Spacer(Modifier.width(Tokens.gapMd))
             Text(text, style = MaterialTheme.typography.bodyMedium)
         }
     }
@@ -99,28 +95,36 @@ internal fun NameStep(
     actions: AddPairActions,
 ) {
     StepTitle(stringResource(R.string.add_name_title))
-    OutlinedTextField(
+    DsTextField(
         value = state.name,
         onValueChange = actions.onName,
-        label = { Text(stringResource(R.string.add_name_label)) },
-        supportingText = { Text(stringResource(R.string.add_name_hint)) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
+        label = stringResource(R.string.add_name_label),
+        supportingText = stringResource(R.string.add_name_hint),
+        modifier = inset,
     )
-    ChoiceRow(stringResource(R.string.add_target_new), null, state.target == DriveTarget.New) {
-        actions.onTarget(DriveTarget.New)
+    SettingsSectionHeader(stringResource(R.string.add_drive_folder))
+    SettingsGroup {
+        item {
+            RadioRow(stringResource(R.string.add_target_new), null, state.target == DriveTarget.New) {
+                actions.onTarget(DriveTarget.New)
+            }
+        }
+        state.linkableFolders.forEach { folder ->
+            item {
+                val selected = (state.target as? DriveTarget.Existing)?.folder == folder
+                RadioRow("Drive Sync/${folder.name}", stringResource(R.string.add_target_existing), selected) {
+                    actions.onTarget(DriveTarget.Existing(folder))
+                }
+            }
+        }
     }
     if (state.linkableFolders.isNotEmpty()) {
-        Text(stringResource(R.string.add_target_existing), style = MaterialTheme.typography.titleSmall)
         Text(
             stringResource(R.string.add_target_existing_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = Tokens.pageInset + Tokens.gapLg),
         )
-        state.linkableFolders.forEach { folder ->
-            val selected = (state.target as? DriveTarget.Existing)?.folder == folder
-            ChoiceRow("Drive Sync/${folder.name}", null, selected) { actions.onTarget(DriveTarget.Existing(folder)) }
-        }
     }
 }
 
@@ -134,28 +138,23 @@ internal fun OptionsStep(
         DirectionCard(direction, selected = state.direction == direction) { actions.onDirection(direction) }
     }
     if (AddPairRules.mirrorAllowed(state.direction)) {
-        Row(
-            Modifier.fillMaxWidth().toggleable(
-                state.mirrorDeletions,
-                role = Role.Switch,
-                onValueChange = actions.onMirror,
-            ),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.add_mirror), style = MaterialTheme.typography.bodyLarge)
-                Text(
-                    stringResource(R.string.add_mirror_body),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+        SettingsGroup {
+            item {
+                SettingsSwitchRow(
+                    stringResource(R.string.add_mirror),
+                    state.mirrorDeletions,
+                    actions.onMirror,
+                    subtitle = stringResource(R.string.add_mirror_body),
+                    icon = Sym.Delete,
                 )
             }
-            Switch(checked = state.mirrorDeletions, onCheckedChange = null)
         }
     }
-    Text(stringResource(R.string.add_conflicts), style = MaterialTheme.typography.titleSmall)
-    ConflictPolicy.entries.forEach { policy ->
-        ChoiceRow(policy.label(), null, state.conflictPolicy == policy) { actions.onPolicy(policy) }
+    SettingsSectionHeader(stringResource(R.string.add_conflicts))
+    SettingsGroup {
+        ConflictPolicy.entries.forEach { policy ->
+            item { RadioRow(policy.label(), null, state.conflictPolicy == policy) { actions.onPolicy(policy) } }
+        }
     }
 }
 
@@ -165,94 +164,85 @@ private fun DirectionCard(
     selected: Boolean,
     onSelect: () -> Unit,
 ) {
-    val colors =
-        if (selected) {
-            CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-        } else {
-            CardDefaults.outlinedCardColors()
-        }
-    OutlinedCard(
-        colors = colors,
-        modifier = Modifier.fillMaxWidth().selectable(selected, role = Role.RadioButton, onClick = onSelect),
+    val scheme = MaterialTheme.colorScheme
+    DsCard(
+        inset.selectable(selected, role = Role.RadioButton, onClick = onSelect),
+        container = if (selected) scheme.secondaryContainer else scheme.surfaceContainerLow,
     ) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(direction.icon(), contentDescription = null, modifier = Modifier.size(28.dp))
-            Spacer(Modifier.width(16.dp))
+        Row(Modifier.padding(Tokens.gapLg), verticalAlignment = Alignment.CenterVertically) {
+            IconTile(
+                direction.icon(),
+                container = if (selected) scheme.primary else scheme.surfaceContainerHighest,
+                content = if (selected) scheme.onPrimary else scheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.width(Tokens.gapLg))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(direction.label(), style = MaterialTheme.typography.titleMedium)
-                Text(direction.body(), style = MaterialTheme.typography.bodySmall)
+                Text(direction.body(), style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
             }
             RadioButton(selected = selected, onClick = null)
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun ReviewStep(state: AddPairUiState) {
-    StepTitle(stringResource(R.string.add_review_title))
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(state.name, style = MaterialTheme.typography.titleLarge)
-            val prefix = if (state.onInternalStorage) "Phone/" else "SD card/"
-            Text(prefix + state.folderPath.orEmpty(), style = MaterialTheme.typography.bodyMedium)
-            val driveName = (state.target as? DriveTarget.Existing)?.folder?.name ?: state.name
-            Text("Drive Sync/$driveName", style = MaterialTheme.typography.bodyMedium)
-            Text(
-                "${state.direction.label()} · ${state.conflictPolicy.label()}",
-                style = MaterialTheme.typography.bodyMedium,
+    StepTitle(stringResource(R.string.add_review_title), stringResource(R.string.add_review_first_sync))
+    val driveName = (state.target as? DriveTarget.Existing)?.folder?.name ?: state.name
+    SettingsSectionHeader(state.name)
+    SettingsGroup {
+        item {
+            SettingsRow(
+                title = (if (state.onInternalStorage) "" else "SD card/") + state.folderPath.orEmpty(),
+                subtitle = state.preview?.let { stringResource(R.string.add_review_phone, it.phoneFiles) },
+                icon = Sym.Smartphone,
+            )
+        }
+        item {
+            val preview = state.preview
+            SettingsRow(
+                title = "Drive Sync/$driveName",
+                subtitle =
+                    when {
+                        preview == null -> null
+                        preview.driveFiles == null -> stringResource(R.string.add_review_drive_new)
+                        else -> stringResource(R.string.add_review_drive_existing, preview.driveFiles)
+                    },
+                icon = Sym.CloudSync,
+            )
+        }
+        item {
+            SettingsRow(
+                title = state.direction.label(),
+                subtitle = state.conflictPolicy.label(),
+                icon = state.direction.icon(),
             )
         }
     }
-    val preview = state.preview
-    if (preview == null) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-            Spacer(Modifier.width(12.dp))
+    if (state.preview == null) {
+        Row(inset.padding(horizontal = Tokens.gapLg), verticalAlignment = Alignment.CenterVertically) {
+            LoadingIndicator(Modifier.size(40.dp))
+            Spacer(Modifier.width(Tokens.gapSm))
             Text(stringResource(R.string.add_review_counting))
         }
-    } else {
-        Text(stringResource(R.string.add_review_phone, preview.phoneFiles), style = MaterialTheme.typography.bodyLarge)
-        Text(
-            if (preview.driveFiles == null) {
-                stringResource(R.string.add_review_drive_new)
-            } else {
-                stringResource(R.string.add_review_drive_existing, preview.driveFiles)
-            },
-            style = MaterialTheme.typography.bodyLarge,
-        )
     }
-    Text(
-        stringResource(R.string.add_review_first_sync),
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+    state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = inset) }
 }
 
 @Composable
-private fun ChoiceRow(
+private fun RadioRow(
     title: String,
-    body: String?,
+    subtitle: String?,
     selected: Boolean,
     onSelect: () -> Unit,
 ) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .selectable(
-                selected,
-                role = Role.RadioButton,
-                onClick = onSelect,
-            ).padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = selected, onClick = null)
-        Spacer(Modifier.width(12.dp))
-        Column {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            if (body != null) Text(body, style = MaterialTheme.typography.bodySmall)
-        }
-    }
+    SettingsRow(
+        title = title,
+        subtitle = subtitle,
+        modifier = Modifier.selectable(selected, role = Role.RadioButton, onClick = onSelect),
+        trailing = { RadioButton(selected = selected, onClick = null) },
+    )
 }
 
 @Composable

@@ -12,7 +12,7 @@
     <string name="pair_fix">Review</string>
     <string name="pair_never_synced">Not synced yet</string>
     <string name="pair_last_synced">Synced %1$s</string>
-    <string name="pair_phone_path">Phone/%1$s</string>
+    <string name="pair_phone_path">%1$s</string>
     <string name="pair_phone_sd_path">SD card/%1$s</string>
     <string name="pair_drive_path">Drive Sync/%1$s</string>
     <string name="status_up_to_date">Up to date</string>
@@ -84,4 +84,11 @@
     <string name="detail_remove_confirm">Remove</string>
     <string name="detail_cancel">Cancel</string>
 
+    <string name="detail_folder">Folder</string>
+    <string name="detail_on_phone">On this phone</string>
+    <string name="detail_on_drive">In Google Drive</string>
+    <string name="direction_short_two_way">Two-way</string>
+    <string name="direction_short_upload">Backup</string>
+    <string name="direction_short_download">Copy</string>
+    <string name="add_drive_folder">Drive folder</string>
 </resources>

@@ -9,9 +9,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun HomeRoute(
     onAddPair: () -> Unit,
     onOpenPair: (String) -> Unit,
-    onOpenConflicts: () -> Unit,
-    onOpenActivity: () -> Unit,
-    onOpenSettings: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -22,9 +19,6 @@ fun HomeRoute(
             onOpenPair = onOpenPair,
             onSyncAll = viewModel::syncAll,
             onSyncPair = viewModel::syncPair,
-            onOpenConflicts = onOpenConflicts,
-            onOpenActivity = onOpenActivity,
-            onOpenSettings = onOpenSettings,
         ),
     )
 }

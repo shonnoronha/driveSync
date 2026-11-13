@@ -26,5 +26,20 @@ class SettingsScreenshots : Screenshots() {
     fun settings() = snap("settings") { SettingsScreen(state, SettingsActions()) }
 
     @Test
+    fun settingsAccent() =
+        snap("settings_accent", seed = io.github.drivesync.core.ui.theme.SeedColors.PURPLE) {
+            SettingsScreen(
+                state.copy(
+                    settings =
+                        state.settings.copy(
+                            dynamicColor = false,
+                            seedColor = io.github.drivesync.core.ui.theme.SeedColors.PURPLE,
+                        ),
+                ),
+                SettingsActions(),
+            )
+        }
+
+    @Test
     fun settingsDark() = snap("settings_dark", dark = true) { SettingsScreen(state, SettingsActions()) }
 }

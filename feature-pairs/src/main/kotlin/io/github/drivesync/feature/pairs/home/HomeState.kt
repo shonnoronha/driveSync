@@ -11,9 +11,6 @@ data class HomeActions(
     val onOpenPair: (String) -> Unit = {},
     val onSyncAll: () -> Unit = {},
     val onSyncPair: (String) -> Unit = {},
-    val onOpenConflicts: () -> Unit = {},
-    val onOpenActivity: () -> Unit = {},
-    val onOpenSettings: () -> Unit = {},
 )
 
 data class HomeUiState(

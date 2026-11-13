@@ -75,6 +75,11 @@ class SettingsViewModel
             dynamicColor: Boolean,
         ) = launch { settings.setTheme(theme, dynamicColor) }
 
+        fun setAccent(
+            seedColor: Int,
+            amoled: Boolean,
+        ) = launch { settings.setAccent(seedColor, amoled) }
+
         fun setLogRetention(days: Int) = launch { settings.setLogRetentionDays(days) }
 
         /** FR-A5: stop syncing, give back folder grants, revoke Drive access, delete app data. Files stay. */
@@ -108,7 +113,6 @@ class SettingsViewModel
 
 @Composable
 fun SettingsRoute(
-    onBack: () -> Unit,
     onSignedOut: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -121,12 +125,12 @@ fun SettingsRoute(
         state = state,
         actions =
             SettingsActions(
-                onBack = onBack,
                 onSignOut = viewModel::signOut,
                 onInterval = viewModel::setInterval,
                 onNetworkRules = viewModel::setNetworkRules,
                 onDeviceName = viewModel::setDeviceName,
                 onTheme = viewModel::setTheme,
+                onAccent = viewModel::setAccent,
                 onLogRetention = viewModel::setLogRetention,
                 onOpenNotifications = {
                     open(

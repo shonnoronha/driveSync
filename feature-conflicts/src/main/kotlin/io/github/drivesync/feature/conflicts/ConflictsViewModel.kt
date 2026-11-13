@@ -52,10 +52,7 @@ class ConflictsViewModel
     }
 
 @Composable
-fun ConflictsRoute(
-    onBack: () -> Unit,
-    viewModel: ConflictsViewModel = hiltViewModel(),
-) {
+fun ConflictsRoute(viewModel: ConflictsViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    ConflictsScreen(state, ConflictsActions(onBack = onBack, onChoose = viewModel::choose))
+    ConflictsScreen(state, ConflictsActions(onChoose = viewModel::choose))
 }

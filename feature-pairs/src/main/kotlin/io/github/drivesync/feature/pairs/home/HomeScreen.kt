@@ -1,9 +1,7 @@
 package io.github.drivesync.feature.pairs.home
 
 import android.text.format.DateUtils
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -16,44 +14,37 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowForward
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.CloudDownload
-import androidx.compose.material.icons.outlined.CloudUpload
-import androidx.compose.material.icons.outlined.Difference
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Sync
-import androidx.compose.material.icons.outlined.SyncAlt
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.drivesync.core.sync.model.SyncDirection
+import io.github.drivesync.core.ui.components.DsCard
 import io.github.drivesync.core.ui.components.EmptyState
+import io.github.drivesync.core.ui.components.IconTile
+import io.github.drivesync.core.ui.components.LoadingState
+import io.github.drivesync.core.ui.components.RootTopBar
 import io.github.drivesync.core.ui.components.StatusChip
 import io.github.drivesync.core.ui.components.StatusTone
+import io.github.drivesync.core.ui.components.Sym
+import io.github.drivesync.core.ui.components.SymIcon
+import io.github.drivesync.core.ui.theme.Tokens
 import io.github.drivesync.feature.pairs.R
 
 /** Home (FR-M1): every pair with its status, last sync and a sync-now action. */
@@ -64,34 +55,35 @@ fun HomeScreen(
     actions: HomeActions,
     modifier: Modifier = Modifier,
 ) {
+    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
-        modifier = modifier,
-        topBar = { HomeTopBar(state.conflictCount, actions) },
+        modifier = modifier.nestedScroll(scroll.nestedScrollConnection),
+        topBar = {
+            RootTopBar(stringResource(R.string.home_title), scroll) {
+                IconButton(onClick = actions.onSyncAll) { SymIcon(Sym.Sync, stringResource(R.string.home_sync_all)) }
+            }
+        },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = actions.onAddPair,
-                icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
+                icon = { SymIcon(Sym.Add, contentDescription = null) },
                 text = { Text(stringResource(R.string.home_add_folder)) },
             )
         },
     ) { padding ->
-        // The pull gesture only starts a sync; progress shows as a thin bar, not a spinner over the list.
         PullToRefreshBox(
             isRefreshing = false,
             onRefresh = actions.onSyncAll,
             modifier = Modifier.fillMaxSize().padding(padding),
         ) {
-            if (state.pairs.any { it.state == PairState.SYNCING }) {
-                LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
-            }
             when {
                 state.loading -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                    LoadingState()
                 }
 
                 state.pairs.isEmpty() -> {
                     EmptyState(
-                        icon = Icons.Outlined.Folder,
+                        icon = Sym.CreateNewFolder,
                         title = stringResource(R.string.home_empty_title),
                         body = stringResource(R.string.home_empty_body),
                         modifier = Modifier.align(Alignment.Center),
@@ -100,8 +92,14 @@ fun HomeScreen(
 
                 else -> {
                     LazyColumn(
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding =
+                            PaddingValues(
+                                start = Tokens.pageInset,
+                                end = Tokens.pageInset,
+                                top = 4.dp,
+                                bottom = 104.dp,
+                            ),
+                        verticalArrangement = Arrangement.spacedBy(Tokens.gapMd),
                     ) {
                         items(state.pairs, key = { it.id }) { pair -> PairCard(pair, state.now, actions) }
                     }
@@ -111,123 +109,91 @@ fun HomeScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun HomeTopBar(
-    conflictCount: Int,
-    actions: HomeActions,
-) {
-    TopAppBar(
-        title = { Text(stringResource(R.string.home_title)) },
-        actions = {
-            IconButton(onClick = actions.onOpenConflicts) {
-                BadgedBox(badge = { if (conflictCount > 0) Badge { Text("$conflictCount") } }) {
-                    Icon(Icons.Outlined.Difference, stringResource(R.string.home_conflicts))
-                }
-            }
-            IconButton(onClick = actions.onOpenActivity) {
-                Icon(Icons.Outlined.History, stringResource(R.string.home_activity))
-            }
-            IconButton(onClick = actions.onOpenSettings) {
-                Icon(Icons.Outlined.Settings, stringResource(R.string.home_settings))
-            }
-        },
-    )
-}
-
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun PairCard(
     pair: PairItem,
     now: Long,
     actions: HomeActions,
 ) {
-    val attention = pair.state == PairState.NEEDS_ATTENTION || pair.state == PairState.CONFIRM_DELETES
-    val colors =
-        if (attention) {
-            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f))
-        } else {
-            CardDefaults.cardColors()
-        }
-    Card(colors = colors, modifier = Modifier.fillMaxWidth().clickable { actions.onOpenPair(pair.id) }) {
-        Column(
-            Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
+    DsCard(onClick = { actions.onOpenPair(pair.id) }) {
+        Column(Modifier.padding(Tokens.gapLg), verticalArrangement = Arrangement.spacedBy(Tokens.gapMd)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    pair.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                StatusChip(pair.state.label(), pair.state.tone(), Modifier.padding(end = 8.dp))
+                val (container, content) = pair.state.tileColors()
+                IconTile(pair.direction.icon(), container = container, content = content)
+                Spacer(Modifier.width(Tokens.gapMd))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        pair.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    PairPaths(pair)
+                }
+                Spacer(Modifier.width(Tokens.gapSm))
+                StatusChip(pair.state.label(), pair.state.tone())
             }
-            PairPaths(pair)
-            if (attention && pair.detail != null) {
+            if (pair.state == PairState.SYNCING) {
+                LinearWavyProgressIndicator(Modifier.fillMaxWidth())
+            }
+            if (pair.attention && pair.detail != null) {
                 Text(pair.detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
             }
-            PairFooter(pair, now, attention, actions)
+            PairFooter(pair, now, actions)
         }
     }
 }
 
+private val PairItem.attention get() = state == PairState.NEEDS_ATTENTION || state == PairState.CONFIRM_DELETES
+
 @Composable
 private fun PairPaths(pair: PairItem) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            pair.direction.icon(),
-            contentDescription = pair.direction.label(),
-            modifier = Modifier.size(16.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+    val phone =
+        stringResource(
+            if (pair.onInternalStorage) R.string.pair_phone_path else R.string.pair_phone_sd_path,
+            pair.phonePath,
         )
-        Spacer(Modifier.width(8.dp))
-        val phone =
-            stringResource(
-                if (pair.onInternalStorage) R.string.pair_phone_path else R.string.pair_phone_sd_path,
-                pair.phonePath,
-            )
-        Text(
-            "$phone  ·  ${stringResource(R.string.pair_drive_path, pair.name)}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
+    Text(
+        "$phone  →  ${stringResource(R.string.pair_drive_path, pair.name)}",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 @Composable
 private fun PairFooter(
     pair: PairItem,
     now: Long,
-    attention: Boolean,
     actions: HomeActions,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.heightIn(min = 52.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.heightIn(min = 40.dp)) {
         Text(
             lastSynced(pair.lastSyncAt, now),
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f),
         )
-        if (attention) {
-            FilledTonalButton(onClick = { actions.onOpenPair(pair.id) }) {
-                Text(stringResource(R.string.pair_fix))
-                Spacer(Modifier.width(4.dp))
-                Icon(
-                    Icons.AutoMirrored.Outlined.ArrowForward,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                )
+        when {
+            pair.attention -> {
+                Button(onClick = { actions.onOpenPair(pair.id) }) {
+                    Text(stringResource(R.string.pair_fix))
+                    Spacer(Modifier.width(Tokens.gapSm))
+                    SymIcon(Sym.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
+                }
             }
-        } else if (pair.state != PairState.PAUSED) {
-            TextButton(onClick = { actions.onSyncPair(pair.id) }, enabled = pair.state != PairState.SYNCING) {
-                Icon(Icons.Outlined.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.pair_sync_now))
+
+            pair.state != PairState.PAUSED -> {
+                FilledTonalButton(
+                    onClick = { actions.onSyncPair(pair.id) },
+                    enabled = pair.state != PairState.SYNCING,
+                ) {
+                    SymIcon(Sym.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(Tokens.gapSm))
+                    Text(stringResource(R.string.pair_sync_now))
+                }
             }
         }
     }
@@ -244,6 +210,17 @@ private fun lastSynced(
         val ago = DateUtils.getRelativeTimeSpanString(at, now, DateUtils.MINUTE_IN_MILLIS).toString()
         stringResource(R.string.pair_last_synced, ago)
     }
+
+@Composable
+private fun PairState.tileColors(): Pair<Color, Color> {
+    val c = MaterialTheme.colorScheme
+    return when (this) {
+        PairState.NEEDS_ATTENTION -> c.errorContainer to c.onErrorContainer
+        PairState.CONFIRM_DELETES, PairState.ERRORS -> c.tertiaryContainer to c.onTertiaryContainer
+        PairState.PAUSED -> c.surfaceContainerHighest to c.onSurfaceVariant
+        else -> c.primaryContainer to c.onPrimaryContainer
+    }
+}
 
 @Composable
 internal fun PairState.label(): String =
@@ -277,9 +254,9 @@ internal fun SyncDirection.label(): String =
         },
     )
 
-internal fun SyncDirection.icon() =
+internal fun SyncDirection.icon(): Int =
     when (this) {
-        SyncDirection.TWO_WAY -> Icons.Outlined.SyncAlt
-        SyncDirection.UPLOAD_ONLY -> Icons.Outlined.CloudUpload
-        SyncDirection.DOWNLOAD_ONLY -> Icons.Outlined.CloudDownload
+        SyncDirection.TWO_WAY -> Sym.SyncAlt
+        SyncDirection.UPLOAD_ONLY -> Sym.CloudUpload
+        SyncDirection.DOWNLOAD_ONLY -> Sym.CloudDownload
     }
