@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher foreground: the folder and sync arrows of docs/branding/logo.svg. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:scaleX="0.07031" android:scaleY="0.07031" android:translateX="18" android:translateY="18">
+        <path android:fillColor="#FFFFFFFF" android:pathData="M268 292h178c22 0 41 11 52 30l20 34h238c40 0 72 32 72 72v308c0 40-32 72-72 72H268c-40 0-72-32-72-72V364c0-40 32-72 72-72z" />
+        <path
+            android:pathData="M384.1 585.5A128.0 128.0 0 0 1 568.1 475.0 M639.9 594.5A128.0 128.0 0 0 1 455.9 705.0"
+            android:strokeWidth="56"
+            android:strokeLineCap="round">
+            <aapt:attr name="android:strokeColor">
+                    <gradient android:type="linear" android:startX="380" android:startY="460" android:endX="650" android:endY="720">
+                        <item android:offset="0" android:color="#FF3D7BF7" />
+                        <item android:offset="1" android:color="#FF0E9F94" />
+                    </gradient>
+                </aapt:attr>
+        </path>
+        <path
+            android:pathData="M620.8 522.6L589.9 430.4L546.4 519.5Z M403.2 657.4L434.1 749.6L477.6 660.5Z"
+            android:strokeWidth="22"
+            android:strokeLineJoin="round">
+            <aapt:attr name="android:fillColor">
+                    <gradient android:type="linear" android:startX="380" android:startY="460" android:endX="650" android:endY="720">
+                        <item android:offset="0" android:color="#FF3D7BF7" />
+                        <item android:offset="1" android:color="#FF0E9F94" />
+                    </gradient>
+                </aapt:attr>
+            <aapt:attr name="android:strokeColor">
+                    <gradient android:type="linear" android:startX="380" android:startY="460" android:endX="650" android:endY="720">
+                        <item android:offset="0" android:color="#FF3D7BF7" />
+                        <item android:offset="1" android:color="#FF0E9F94" />
+                    </gradient>
+                </aapt:attr>
+        </path>
+    </group>
+</vector>

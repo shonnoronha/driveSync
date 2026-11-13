@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>Drive Sync</title>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4F86FF"/>
+      <stop offset="0.55" stop-color="#2F6FE4"/>
+      <stop offset="1" stop-color="#11AFA2"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.22" cy="0.12" r="0.75">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="arrows" gradientUnits="userSpaceOnUse" x1="380" y1="460" x2="650" y2="720">
+      <stop offset="0" stop-color="#3D7BF7"/>
+      <stop offset="1" stop-color="#0E9F94"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#062A5C" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" rx="236" fill="url(#tile)"/>
+  <rect width="1024" height="1024" rx="236" fill="url(#glow)"/>
+  <g filter="url(#shadow)">
+    <!-- Folder: tab + body -->
+    <path fill="#FFFFFF" d="M268 292h178c22 0 41 11 52 30l20 34h238c40 0 72 32 72 72v308c0 40-32 72-72 72H268c-40 0-72-32-72-72V364c0-40 32-72 72-72z"/>
+  </g>
+  <!-- Sync arrows -->
+  <g fill="none" stroke="url(#arrows)" stroke-width="56" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M384.1 585.5A128.0 128.0 0 0 1 568.1 475.0 M639.9 594.5A128.0 128.0 0 0 1 455.9 705.0"/>
+  </g>
+  <path fill="url(#arrows)" stroke="url(#arrows)" stroke-width="22" stroke-linejoin="round" d="M620.8 522.6L589.9 430.4L546.4 519.5Z M403.2 657.4L434.1 749.6L477.6 660.5Z"/>
+</svg>
