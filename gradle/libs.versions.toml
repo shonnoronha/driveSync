@@ -7,7 +7,7 @@ hilt = "2.60.1"
 detekt = "1.23.8"
 ktlintGradle = "14.2.0"
 ktlint = "1.8.0"
-kover = "0.9.9"
+kover = "0.9.11"
 
 # SDK levels (read by convention plugins)
 minSdk = "26"
