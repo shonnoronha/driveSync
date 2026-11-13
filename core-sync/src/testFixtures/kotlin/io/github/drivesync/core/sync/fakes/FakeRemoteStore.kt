@@ -227,6 +227,7 @@ class FakeRemoteStore(
         descendants(n).forEach { it.path = RelPath.of(to.value + it.path.value.removePrefix(from.value)) }
         n.path = to
         n.modifiedTime = tick()
+        n.version++ // Drive bumps the version on any metadata change, renames included.
     }
 
     private fun trashTree(n: Node) {

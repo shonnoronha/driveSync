@@ -248,7 +248,7 @@ internal class PlanBuilder(
                 val r = b.remoteFileId?.let(remoteById::get)
                 val l = localByPath[b.path]
                 if (r != null && l != null && isRemoteMove(b, l, r)) {
-                    add(MoveLocal(r.path, b.path, l, MoveReason.DETECTED_MOVE))
+                    add(MoveLocal(r.path, b.path, l, MoveReason.DETECTED_MOVE, remote = r))
                     handled += b.path
                     handled += r.path
                 }

@@ -142,7 +142,13 @@ class SyncExecutor(
         return commit(
             BaseUpdate.Remove(action.from),
             BaseUpdate.Put(
-                old.copy(path = action.path, localSize = moved.size, localLastModified = moved.lastModified),
+                old.copy(
+                    path = action.path,
+                    localSize = moved.size,
+                    localLastModified = moved.lastModified,
+                    remoteFileId = action.remote?.fileId ?: old.remoteFileId,
+                    remoteVersion = action.remote?.version ?: old.remoteVersion,
+                ),
             ),
         )
     }

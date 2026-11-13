@@ -49,6 +49,10 @@ gradlePlugin {
             id = "drivesync.jvm.library"
             implementationClass = "JvmLibraryConventionPlugin"
         }
+        register("coverage") {
+            id = "drivesync.coverage"
+            implementationClass = "CoverageConventionPlugin"
+        }
         register("hilt") {
             id = "drivesync.hilt"
             implementationClass = "HiltConventionPlugin"

@@ -27,12 +27,16 @@ sealed interface SyncAction {
         val reason: MoveReason,
     ) : SyncAction
 
-    /** Rename/move a local file from [from] to [path]. */
+    /**
+     * Rename/move a local file from [from] to [path]. For a detected Drive move, [remote] is the moved Drive file,
+     * whose new version goes into the base (Drive bumps the version on a rename).
+     */
     data class MoveLocal(
         override val path: RelPath,
         val from: RelPath,
         val local: LocalEntry,
         val reason: MoveReason,
+        val remote: RemoteEntry? = null,
     ) : SyncAction
 
     /** Upload [local] to [path]. [replaces] is the Drive file to overwrite (expected state), or null to create. */

@@ -141,14 +141,14 @@ class SyncPlannerMoveTest {
         @Test
         fun `renamed on Drive renames the local file`() {
             val plan = planReady(listOf(l), listOf(movedR), listOf(oldBase))
-            assertActions(plan, MoveLocal(new, old, l, MoveReason.DETECTED_MOVE))
+            assertActions(plan, MoveLocal(new, old, l, MoveReason.DETECTED_MOVE, movedR))
             assertConflicts(plan)
         }
 
         @Test
         fun `download-only pairs detect Drive moves too`() {
             val plan = planReady(listOf(l), listOf(movedR), listOf(oldBase), settings(SyncDirection.DOWNLOAD_ONLY))
-            assertActions(plan, MoveLocal(new, old, l, MoveReason.DETECTED_MOVE))
+            assertActions(plan, MoveLocal(new, old, l, MoveReason.DETECTED_MOVE, movedR))
         }
 
         @Test
@@ -164,7 +164,7 @@ class SyncPlannerMoveTest {
             assertActions(
                 plan,
                 CreateLocalFolder(path("sub")),
-                MoveLocal(path("sub/old.txt"), old, l, MoveReason.DETECTED_MOVE),
+                MoveLocal(path("sub/old.txt"), old, l, MoveReason.DETECTED_MOVE, deeper),
             )
         }
 
@@ -197,16 +197,17 @@ class SyncPlannerMoveTest {
         @Test
         fun `Drive folder rename moves each file and replaces the folder`() {
             val x = local("A/x.txt", "x")
+            val movedX = remote("B/x.txt", "x", fileId = "id:A/x.txt")
             val plan =
                 planReady(
                     listOf(localFolder("A"), x),
-                    listOf(remoteFolder("B", fileId = "id:A"), remote("B/x.txt", "x", fileId = "id:A/x.txt")),
+                    listOf(remoteFolder("B", fileId = "id:A"), movedX),
                     listOf(baseFolder("A"), base("A/x.txt", "x")),
                 )
             assertActions(
                 plan,
                 CreateLocalFolder(path("B")),
-                MoveLocal(path("B/x.txt"), path("A/x.txt"), x, MoveReason.DETECTED_MOVE),
+                MoveLocal(path("B/x.txt"), path("A/x.txt"), x, MoveReason.DETECTED_MOVE, movedX),
                 RecycleLocal(path("A"), localFolder("A")),
             )
         }
