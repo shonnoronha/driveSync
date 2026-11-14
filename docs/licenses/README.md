@@ -6,5 +6,3 @@
 | Material Symbols Rounded (converted to vector drawables) | `core-ui/src/main/res/drawable/sym_*.xml` | Apache License 2.0 ([google/material-design-icons](https://github.com/google/material-design-icons)) |
 | material-color-utilities (Kotlin port) | dependency `com.materialkolor:material-color-utilities` | Apache License 2.0 |
 
-The visual design follows the Material style of [Mornye](https://github.com/mornyeapp/Mornye) (design ideas only;
-no Mornye code or brand assets are included).

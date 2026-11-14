@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
-/** Move detection (PRD 3.9, FR-S5) and one-way pairs (rule 8, ADR 0002 decisions 3 and 4). */
+/** Move detection (PRD 3.9, FR-S5) and one-way pairs (rule 8). */
 class MovesAndDirectionScenarioTest {
     private suspend fun syncedPhone(vararg files: Pair<String, String>): Phone {
         val p = Phone()

@@ -16,3 +16,8 @@ keystore.properties
 .idea/
 *.iml
 .DS_Store
+
+# Local working notes (kept out of the public repo)
+CLAUDE.md
+docs/decisions/
+.claude/

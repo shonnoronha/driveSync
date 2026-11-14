@@ -30,7 +30,7 @@ import io.github.drivesync.core.ui.components.SettingsSwitchRow
 import io.github.drivesync.core.ui.components.Sym
 import io.github.drivesync.feature.settings.R
 
-/** Settings and About (PRD 4.5, 8.7), grouped like Mornye's Material settings. */
+/** Settings and About (PRD 4.5, 8.7), in connected groups. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(

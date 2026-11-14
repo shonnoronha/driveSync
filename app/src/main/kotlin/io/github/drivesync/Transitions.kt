@@ -12,7 +12,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.navigation.NavBackStackEntry
 
 /**
- * Page transitions in Android's "fade forwards" style (as Mornye uses): the new page slides in a little while it
+ * Page transitions in Android's "fade forwards" style: the new page slides in a little while it
  * fades in, the old one drifts the other way and fades out, and back reverses it. The predictive back gesture
  * scrubs the same motion, instead of shrinking the page into a card. Switching tabs only fades.
  */

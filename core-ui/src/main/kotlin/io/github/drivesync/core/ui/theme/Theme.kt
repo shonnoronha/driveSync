@@ -14,7 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 
 /**
  * Material 3 Expressive: colors from the wallpaper on Android 12+ (or from a seed color), Google Sans Flex,
- * the app's radius scale and spring motion. The look follows Mornye's Material style.
+ * the app's radius scale and spring motion.
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable

@@ -27,20 +27,15 @@ a sync engine that is a pure, exhaustively tested Kotlin library. It is designed
 
 ## Screenshots
 
-<p align="center">
-  <img src="app/screenshots/shell.png" width="24%" alt="Folders">
-  <img src="app/screenshots/detail.png" width="24%" alt="Folder detail">
-  <img src="app/screenshots/conflicts.png" width="24%" alt="Conflicts">
-  <img src="app/screenshots/settings.png" width="24%" alt="Settings">
-</p>
-<p align="center">
-  <img src="app/screenshots/onboarding_1_welcome.png" width="24%" alt="Welcome">
-  <img src="app/screenshots/add_3_options.png" width="24%" alt="Add a folder">
-  <img src="app/screenshots/activity.png" width="24%" alt="Activity">
-  <img src="app/screenshots/home_green_amoled.png" width="24%" alt="Pure black theme with a green accent">
-</p>
+Taken on a Pixel 8 in dark mode, with colors from the wallpaper.
 
-<sub>These are rendered on the JVM with a fixed accent. On your phone, the colors come from your wallpaper.</sub>
+<p align="center">
+  <img src="docs/screenshots/home.png" width="19%" alt="Folders, with a sync in progress">
+  <img src="docs/screenshots/folder.png" width="19%" alt="Folder details">
+  <img src="docs/screenshots/activity.png" width="19%" alt="Activity">
+  <img src="docs/screenshots/conflicts.png" width="19%" alt="Conflicts">
+  <img src="docs/screenshots/settings.png" width="19%" alt="Settings">
+</p>
 
 ## Features
 
@@ -70,7 +65,7 @@ The sync engine enforces these on every run (they are tested, not just promised)
 | ✍️ **No half-written files** | Downloads land in a hidden temp file and are verified (size + MD5) before they replace anything. Uploads are abandoned if the file changes mid-upload. |
 | 🆕 **First sync only merges** | A new or re-linked folder never deletes anything on its first run. |
 
-The full reasoning lives in [`docs/PRD.md`](docs/PRD.md) and the decision records in [`docs/decisions/`](docs/decisions/).
+The full reasoning lives in [`docs/PRD.md`](docs/PRD.md).
 
 ## Honest limits
 
@@ -133,12 +128,10 @@ screenshot tests. Every core module has a 70% line-coverage gate; the sync engin
 ```
 
 Pull requests run the quick checks; the `release` branch runs the full build, Android lint and the screenshot
-comparison. Design decisions are recorded as short ADRs in [`docs/decisions/`](docs/decisions/).
+comparison.
 
 ## Credits
 
-- The visual design follows the Material style of [Mornye](https://github.com/mornyeapp/Mornye). Only the design
-  ideas were used; none of its code or brand assets are included.
 - [Google Sans Flex](https://github.com/googlefonts/googlesans-flex) (SIL Open Font License) and
   [Material Symbols](https://github.com/google/material-design-icons) (Apache 2.0); see [`docs/licenses/`](docs/licenses/).
 

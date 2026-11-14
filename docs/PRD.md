@@ -262,7 +262,7 @@ Theme (system, light, dark, dynamic color toggle), default sync interval, networ
 | NFR-6 | **Accessibility:** TalkBack labels, minimum 48 dp targets, dynamic font scaling, sufficient contrast, reduced-motion respect |
 | NFR-7 | **Localization:** all strings externalized; translations via Weblate or similar community platform |
 | NFR-8 | **Compatibility:** Android 8.0+; phones, tablets and foldables (adaptive layouts with window size classes); test on at least one aggressive-battery OEM (Xiaomi, Samsung, OnePlus) |
-| NFR-9 | **Maintainability:** modular code, >70% unit-test coverage on the sync engine, documented architecture decisions (ADRs) |
+| NFR-9 | **Maintainability:** modular code, >70% unit-test coverage on the sync engine, documented architecture |
 
 ## 6. Android platform considerations and nuances
 
@@ -332,7 +332,7 @@ A per-pair mutex ensures only one sync runs per pair at a time. The planner is a
 
 ## 8. UI and UX requirements
 
-The look should follow the **Material 3** guidelines: dynamic color from the wallpaper, large expressive typography, rounded shapes, edge-to-edge layout, predictive back gesture, and motion that supports (not distracts from) status changes. I could not verify the details of the Mornye reference app from here, so please share screenshots or specific screens you like so the design spec can match its visual language.
+The look should follow the **Material 3** guidelines: dynamic color from the wallpaper, large expressive typography, rounded shapes, edge-to-edge layout, predictive back gesture, and motion that supports (not distracts from) status changes.
 
 **Screens:**
 
@@ -398,7 +398,6 @@ These are estimates for one experienced developer and will vary with team size.
 4. Should shared drives and "Shared with me" folders be supported in v1?
 5. How should Google-native files (Docs, Sheets) be treated by default: skip, or export?
 6. Is the SD card and external storage in scope for v1?
-7. Which specific Mornye screens or visual elements should the design emulate?
 
 ## 14. Acceptance criteria for v1
 

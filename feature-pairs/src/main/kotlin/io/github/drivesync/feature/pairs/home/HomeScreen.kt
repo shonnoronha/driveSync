@@ -205,6 +205,9 @@ private fun lastSynced(
 ): String =
     if (at == null) {
         stringResource(R.string.pair_never_synced)
+    } else if (now - at < DateUtils.MINUTE_IN_MILLIS) {
+        // Android's relative time says "0 minutes ago" for the first minute.
+        stringResource(R.string.pair_synced_just_now)
     } else {
         // Clamp: a timestamp slightly ahead of the screen's clock must not read "in 0 minutes".
         val ago = DateUtils.getRelativeTimeSpanString(minOf(at, now), now, DateUtils.MINUTE_IN_MILLIS).toString()

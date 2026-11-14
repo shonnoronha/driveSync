@@ -1,4 +1,4 @@
-// Pure Kotlin/JVM sync engine. Must never depend on Android (CLAUDE.md, PRD 7).
+// Pure Kotlin/JVM sync engine. Must never depend on Android (PRD 7).
 plugins {
     alias(libs.plugins.drivesync.jvm.library)
     `java-test-fixtures`
