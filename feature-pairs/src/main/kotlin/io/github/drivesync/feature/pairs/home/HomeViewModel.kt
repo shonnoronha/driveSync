@@ -2,7 +2,6 @@ package io.github.drivesync.feature.pairs.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.drivesync.core.data.activity.ActivityRepository
@@ -13,7 +12,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
@@ -26,10 +24,7 @@ class HomeViewModel
         workManager: WorkManager,
         private val scheduler: SyncScheduler,
     ) : ViewModel() {
-        private val running =
-            workManager.getWorkInfosByTagFlow(SyncScheduler.TAG).map { infos ->
-                infos.filter { it.state == WorkInfo.State.RUNNING }
-            }
+        private val running = workManager.runningSyncs()
 
         /** Re-renders "synced 5 min ago" every minute. */
         private val clock =
@@ -45,9 +40,14 @@ class HomeViewModel
                 // The ticker only triggers a redraw each minute; the time itself is read fresh, so a sync that just
                 // finished is never "in the future".
                 val now = System.currentTimeMillis()
-                val pairRuns = work.mapNotNull { info -> SyncScheduler.pairIdOf(info.tags) }
-                val allRuns = work.any { info -> SyncScheduler.pairIdOf(info.tags) == null }
-                homeState(list, conflicts.size, pairRuns.toSet(), syncingAll = allRuns, now = now)
+                homeState(
+                    list,
+                    conflicts.size,
+                    work.pairIds,
+                    syncingAll = work.all,
+                    now = now,
+                    progress = work.progress,
+                )
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), HomeUiState())
 
         fun syncAll() = scheduler.syncNow()

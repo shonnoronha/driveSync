@@ -4,6 +4,7 @@ import io.github.drivesync.core.data.db.PairStatus
 import io.github.drivesync.core.data.pairs.SyncPair
 import io.github.drivesync.core.localstorage.TreeUris
 import io.github.drivesync.core.sync.model.SyncDirection
+import io.github.drivesync.core.work.android.PairProgress
 
 /** Callbacks of the home screen, grouped to keep signatures short. */
 data class HomeActions(
@@ -30,6 +31,8 @@ data class PairItem(
     val state: PairState,
     val detail: String?,
     val lastSyncAt: Long?,
+    /** While syncing: how far the run is ("3 / 182"), once the worker has reported it. */
+    val progress: PairProgress? = null,
 )
 
 /** What the pair card shows, folding the stored status, the user's pause and a running sync together. */
@@ -42,6 +45,7 @@ fun homeState(
     syncingPairs: Set<String>,
     syncingAll: Boolean,
     now: Long,
+    progress: Map<String, PairProgress> = emptyMap(),
 ): HomeUiState =
     HomeUiState(
         loading = false,
@@ -57,7 +61,7 @@ fun homeState(
                     state = pair.state(syncing = pair.enabled && (syncingAll || pair.id in syncingPairs)),
                     detail = pair.statusDetail,
                     lastSyncAt = pair.lastSyncAt,
-                )
+                ).let { item -> if (item.state == PairState.SYNCING) item.copy(progress = progress[pair.id]) else item }
             },
         conflictCount = conflictCount,
         now = now,

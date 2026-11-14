@@ -156,6 +156,6 @@ class SchedulerTest {
         notifier.needsAttention(pair, "SD card removed")
         notifier.conflicts(2)
         notifier.failures(pair, 1)
-        notifier.progress()
+        notifier.progress(null, null)
     }
 }

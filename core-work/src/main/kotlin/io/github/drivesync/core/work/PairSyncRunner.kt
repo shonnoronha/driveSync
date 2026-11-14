@@ -8,6 +8,7 @@ import io.github.drivesync.core.drive.auth.AuthRequiredException
 import io.github.drivesync.core.sync.engine.ActionOutcome
 import io.github.drivesync.core.sync.engine.SyncEngine
 import io.github.drivesync.core.sync.engine.SyncOutcome
+import io.github.drivesync.core.sync.engine.SyncProgressListener
 import io.github.drivesync.core.sync.plan.ConflictStamp
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -59,13 +60,21 @@ class PairSyncRunner
             pairId: String,
             deviceName: String?,
             deletionsConfirmed: Boolean = false,
+            progress: SyncProgressListener = SyncProgressListener.NONE,
         ): RunResult =
             locks.getOrPut(pairId) { Mutex() }.withLock {
                 val pair = pairs.pair(pairId)?.takeIf { it.enabled } ?: return@withLock RunResult.Skipped
                 try {
                     val engine = SyncEngine(stores.local(pair), stores.remote(pair), pairs.baseStore(pair.id))
                     val stamp = ConflictStamp(environment.now(), deviceName ?: environment.defaultDeviceName)
-                    val outcome = engine.sync(pair.settings, stamp, deletionsConfirmed, activity.resolutions(pair.id))
+                    val outcome =
+                        engine.sync(
+                            pair.settings,
+                            stamp,
+                            deletionsConfirmed,
+                            activity.resolutions(pair.id),
+                            progress,
+                        )
                     recorder.record(pair.id, outcome)
                     if (outcome is SyncOutcome.Completed) activity.clearResolutions(pair.id)
                     outcome.toResult(pair.id)

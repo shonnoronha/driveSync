@@ -9,9 +9,17 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import io.github.drivesync.core.data.pairs.SyncPair
 import io.github.drivesync.core.data.settings.SettingsRepository
+import io.github.drivesync.core.sync.engine.SyncProgress
 import io.github.drivesync.core.work.MediaFolders
+import io.github.drivesync.core.work.PairProgressListener
 import io.github.drivesync.core.work.SyncCoordinator
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.launch
 
 /**
  * The single sync worker. [MODE_ALL] is the periodic coordinator and "sync all now", [MODE_PAIR] one pair, and
@@ -29,41 +37,68 @@ class SyncWorker
         private val settings: SettingsRepository,
         private val notifier: AndroidSyncNotifier,
     ) : CoroutineWorker(context, params) {
-        override suspend fun doWork(): Result {
-            promoteToForeground()
-            val retry =
-                when (inputData.getString(KEY_MODE)) {
-                    MODE_PAIR -> {
-                        val pairId = inputData.getString(KEY_PAIR_ID) ?: return Result.failure()
-                        coordinator.syncPair(pairId, inputData.getBoolean(KEY_CONFIRM_DELETES, false))
-                    }
-
-                    MODE_MEDIA -> {
-                        coordinator.syncAll { MediaFolders.isMediaTree(it.localTreeUri) }.also {
-                            scheduler.watchMedia(settings.current())
+        override suspend fun doWork(): Result =
+            coroutineScope {
+                val foreground = promoteToForeground(null, null)
+                // Progress is published at most every PROGRESS_INTERVAL_MS: each update is a database write.
+                val latest = MutableStateFlow<Pair<SyncPair, SyncProgress>?>(null)
+                val publisher =
+                    launch {
+                        latest.filterNotNull().collect { (pair, progress) ->
+                            setProgress(WorkProgress.data(pair.id, progress))
+                            if (foreground) promoteToForeground(pair.name, progress)
+                            delay(PROGRESS_INTERVAL_MS)
                         }
                     }
+                val onProgress = PairProgressListener { pair, progress -> latest.value = pair to progress }
+                val retry =
+                    when (inputData.getString(KEY_MODE)) {
+                        MODE_PAIR -> {
+                            val pairId = inputData.getString(KEY_PAIR_ID)
+                            if (pairId == null) {
+                                publisher.cancel()
+                                return@coroutineScope Result.failure()
+                            }
+                            coordinator.syncPair(pairId, inputData.getBoolean(KEY_CONFIRM_DELETES, false), onProgress)
+                        }
 
-                    else -> {
-                        coordinator.syncAll()
+                        MODE_MEDIA -> {
+                            coordinator.syncAll({ MediaFolders.isMediaTree(it.localTreeUri) }, onProgress).also {
+                                scheduler.watchMedia(settings.current())
+                            }
+                        }
+
+                        else -> {
+                            coordinator.syncAll(onProgress = onProgress)
+                        }
                     }
-                }
-            return if (retry && runAttemptCount < MAX_RETRIES) Result.retry() else Result.success()
-        }
+                publisher.cancel()
+                if (retry && runAttemptCount < MAX_RETRIES) Result.retry() else Result.success()
+            }
 
-        override suspend fun getForegroundInfo(): ForegroundInfo = foregroundInfo()
+        override suspend fun getForegroundInfo(): ForegroundInfo = foregroundInfo(null, null)
 
-        /** Best effort: Android 12+ refuses foreground starts from the background, and the sync runs anyway. */
-        private suspend fun promoteToForeground() {
+        /**
+         * Best effort: Android 12+ refuses foreground starts from the background, and the sync runs anyway.
+         * Returns whether the worker is in the foreground (so later progress updates its notification).
+         */
+        private suspend fun promoteToForeground(
+            pairName: String?,
+            progress: SyncProgress?,
+        ): Boolean =
             try {
-                setForeground(foregroundInfo())
+                setForeground(foregroundInfo(pairName, progress))
+                true
             } catch (_: IllegalStateException) {
                 // Not allowed right now (ForegroundServiceStartNotAllowedException is an IllegalStateException).
+                false
             }
-        }
 
-        private fun foregroundInfo(): ForegroundInfo {
-            val notification = notifier.progress()
+        private fun foregroundInfo(
+            pairName: String?,
+            progress: SyncProgress?,
+        ): ForegroundInfo {
+            val notification = notifier.progress(pairName, progress)
             return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ForegroundInfo(
                     AndroidSyncNotifier.ID_PROGRESS,
@@ -83,5 +118,6 @@ class SyncWorker
             const val MODE_PAIR = "pair"
             const val MODE_MEDIA = "media"
             private const val MAX_RETRIES = 5
+            private const val PROGRESS_INTERVAL_MS = 300L
         }
     }

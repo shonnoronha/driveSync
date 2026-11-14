@@ -11,6 +11,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.drivesync.core.data.pairs.SyncPair
+import io.github.drivesync.core.sync.engine.SyncProgress
 import io.github.drivesync.core.work.R
 import io.github.drivesync.core.work.SyncNotifier
 import javax.inject.Inject
@@ -44,14 +45,39 @@ class AndroidSyncNotifier
             )
         }
 
-        fun progress(): Notification =
-            NotificationCompat
-                .Builder(context, CHANNEL_PROGRESS)
-                .setSmallIcon(android.R.drawable.stat_notify_sync)
-                .setContentTitle(context.getString(R.string.notification_syncing))
-                .setOngoing(true)
-                .setSilent(true)
-                .build()
+        /** The ongoing sync notification: which folder, and "3 / 182" with a bar once the work is known. */
+        fun progress(
+            pairName: String?,
+            progress: SyncProgress?,
+        ): Notification {
+            val builder =
+                NotificationCompat
+                    .Builder(context, CHANNEL_PROGRESS)
+                    .setSmallIcon(android.R.drawable.stat_notify_sync)
+                    .setOngoing(true)
+                    .setSilent(true)
+                    .setOnlyAlertOnce(true)
+            when {
+                pairName == null -> {
+                    builder.setContentTitle(context.getString(R.string.notification_syncing)).setProgress(0, 0, true)
+                }
+
+                progress is SyncProgress.Transferring && progress.total > 0 -> {
+                    builder
+                        .setContentTitle(context.getString(R.string.notification_syncing_pair, pairName))
+                        .setContentText(
+                            context.getString(R.string.notification_progress, progress.done, progress.total),
+                        ).setProgress(progress.total, progress.done, false)
+                }
+
+                else -> {
+                    builder
+                        .setContentTitle(context.getString(R.string.notification_checking_pair, pairName))
+                        .setProgress(0, 0, true)
+                }
+            }
+            return builder.build()
+        }
 
         override fun needsAttention(
             pair: SyncPair,

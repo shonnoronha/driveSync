@@ -3,6 +3,7 @@ package io.github.drivesync.feature.pairs
 import io.github.drivesync.core.data.db.PairStatus
 import io.github.drivesync.core.data.pairs.SyncPair
 import io.github.drivesync.core.sync.model.PairSettings
+import io.github.drivesync.core.work.android.PairProgress
 import io.github.drivesync.feature.pairs.home.PairState
 import io.github.drivesync.feature.pairs.home.homeState
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -57,5 +58,13 @@ class HomeStateTest {
     fun `an all-pairs run marks every enabled pair`() {
         val state = homeState(listOf(pair("a"), pair("b", enabled = false)), 0, emptySet(), syncingAll = true, now = 0)
         assertEquals(listOf(PairState.SYNCING, PairState.PAUSED), state.pairs.map { it.state })
+    }
+
+    @Test
+    fun `progress shows on syncing pairs only`() {
+        val progress = mapOf("a" to PairProgress("a", 3, 182), "b" to PairProgress("b", 1, 2))
+        val state = homeState(listOf(pair("a"), pair("b")), 0, setOf("a"), false, now = 0, progress = progress)
+        assertEquals(progress["a"], state.pairs[0].progress)
+        assertEquals(null, state.pairs[1].progress)
     }
 }

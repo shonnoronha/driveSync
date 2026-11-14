@@ -60,7 +60,7 @@ class SyncCoordinatorTest {
             val notes = h.addPair("Notes")
             h.locals.getValue(camera).write("p.jpg", "p")
             h.locals.getValue(notes).write("n.md", "n")
-            h.coordinator.syncAll { MediaFolders.isMediaTree(it.localTreeUri) }
+            h.coordinator.syncAll(filter = { MediaFolders.isMediaTree(it.localTreeUri) })
             assertEquals("p", h.drives.getValue(camera).content("p.jpg"))
             assertEquals(null, h.drives.getValue(notes).content("n.md"))
         }

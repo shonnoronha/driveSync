@@ -20,7 +20,6 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -135,7 +134,7 @@ private fun PairCard(
                 StatusChip(pair.state.label(), pair.state.tone())
             }
             if (pair.state == PairState.SYNCING) {
-                LinearWavyProgressIndicator(Modifier.fillMaxWidth())
+                SyncProgressRow(pair.progress)
             }
             if (pair.attention && pair.detail != null) {
                 Text(pair.detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)

@@ -3,6 +3,7 @@ package io.github.drivesync.screenshots
 import androidx.compose.foundation.layout.padding
 import io.github.drivesync.core.sync.model.SyncDirection
 import io.github.drivesync.core.ui.theme.SeedColors
+import io.github.drivesync.core.work.android.PairProgress
 import io.github.drivesync.feature.pairs.home.HomeActions
 import io.github.drivesync.feature.pairs.home.HomeScreen
 import io.github.drivesync.feature.pairs.home.HomeUiState
@@ -25,6 +26,7 @@ class HomeScreenshots : Screenshots() {
                 PairState.SYNCING,
                 null,
                 now - 3 * minute,
+                PairProgress("1", done = 37, total = 182),
             ),
             PairItem(
                 "2",

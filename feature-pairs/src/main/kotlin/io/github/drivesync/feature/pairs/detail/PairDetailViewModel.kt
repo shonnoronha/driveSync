@@ -3,6 +3,7 @@ package io.github.drivesync.feature.pairs.detail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.WorkManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.drivesync.core.data.activity.ActivityRepository
 import io.github.drivesync.core.data.pairs.PairRepository
@@ -17,6 +18,7 @@ import io.github.drivesync.core.work.android.SyncScheduler
 import io.github.drivesync.feature.activity.ActivityRow
 import io.github.drivesync.feature.pairs.add.AddPairRules
 import io.github.drivesync.feature.pairs.home.homeState
+import io.github.drivesync.feature.pairs.home.runningSyncs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -38,6 +40,7 @@ class PairDetailViewModel
         private val folders: DriveSyncFolders,
         private val trees: SafTrees,
         private val scheduler: SyncScheduler,
+        workManager: WorkManager,
     ) : ViewModel() {
         private val pairId: String = checkNotNull(savedState[PAIR_ID]) { "pairId missing" }
         private val local = MutableStateFlow(LocalState())
@@ -53,14 +56,23 @@ class PairDetailViewModel
                 activity.observe(pairId, RECENT),
                 activity.observeSkipped(pairId),
                 local,
-            ) { pair, recent, skipped, extra ->
+                workManager.runningSyncs(),
+            ) { pair, recent, skipped, extra, running ->
                 if (pair == null) {
                     PairDetailUiState(loading = false, removed = true)
                 } else {
                     val now = System.currentTimeMillis()
                     PairDetailUiState(
                         loading = false,
-                        pair = homeState(listOf(pair), 0, emptySet(), false, now).pairs.single(),
+                        pair =
+                            homeState(
+                                listOf(pair),
+                                0,
+                                running.pairIds,
+                                running.all,
+                                now,
+                                running.progress,
+                            ).pairs.single(),
                         settings = pair.settings,
                         enabled = pair.enabled,
                         recent = recent.map { ActivityRow(it.id, it.kind, pair.name, it.path, it.detail, it.time) },

@@ -4,6 +4,7 @@ import io.github.drivesync.core.data.activity.ActivityRepository
 import io.github.drivesync.core.data.pairs.PairRepository
 import io.github.drivesync.core.data.pairs.SyncPair
 import io.github.drivesync.core.data.settings.SettingsRepository
+import io.github.drivesync.core.sync.engine.SyncProgress
 import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -23,11 +24,18 @@ class SyncCoordinator
         private val environment: SyncEnvironment,
     ) {
         /** Syncs every enabled pair matching [filter]. Returns true when a transient failure asks for a retry. */
-        suspend fun syncAll(filter: (SyncPair) -> Boolean = { true }): Boolean {
+        suspend fun syncAll(
+            filter: (SyncPair) -> Boolean = { true },
+            onProgress: PairProgressListener = PairProgressListener.NONE,
+        ): Boolean {
             val app = settings.current()
             if (app.accountEmail == null) return false // Not signed in: nothing to sync yet.
             val due = pairs.pairs().filter { it.enabled && filter(it) }
-            val results = due.map { it to runner.run(it.id, app.deviceName) }
+            val results =
+                due.map { pair ->
+                    pair to
+                        runner.run(pair.id, app.deviceName) { onProgress.onProgress(pair, it) }
+                }
             notify(results)
             pruneLog(app.logRetentionDays)
             return results.any { it.second is RunResult.Retry }
@@ -37,11 +45,12 @@ class SyncCoordinator
         suspend fun syncPair(
             pairId: String,
             deletionsConfirmed: Boolean,
+            onProgress: PairProgressListener = PairProgressListener.NONE,
         ): Boolean {
             val app = settings.current()
             if (app.accountEmail == null) return false
             val pair = pairs.pair(pairId) ?: return false
-            val result = runner.run(pairId, app.deviceName, deletionsConfirmed)
+            val result = runner.run(pairId, app.deviceName, deletionsConfirmed) { onProgress.onProgress(pair, it) }
             notify(listOf(pair to result))
             return result is RunResult.Retry
         }
@@ -81,3 +90,15 @@ class SyncCoordinator
             activity.prune(before = now - TimeUnit.DAYS.toMillis(retentionDays.toLong()))
         }
     }
+
+/** Progress of the pair being synced right now. */
+fun interface PairProgressListener {
+    fun onProgress(
+        pair: SyncPair,
+        progress: SyncProgress,
+    )
+
+    companion object {
+        val NONE = PairProgressListener { _, _ -> }
+    }
+}

@@ -38,8 +38,10 @@ class SyncEngine(
         stamp: ConflictStamp,
         deletionsConfirmed: Boolean = false,
         resolutions: Map<RelPath, ConflictPolicy> = emptyMap(),
+        progress: SyncProgressListener = SyncProgressListener.NONE,
     ): SyncOutcome =
         mutex.withLock {
+            progress.onProgress(SyncProgress.Checking)
             val base = baseStore.load()
             val remoteSnapshot = remote.scan()
             val localSnapshot = withHashes(cleanUpTempFiles(local.scan()), remoteSnapshot, base)
@@ -54,7 +56,7 @@ class SyncEngine(
                 }
 
                 is PlanResult.Ready -> {
-                    val report = executor.execute(result.plan, base)
+                    val report = executor.execute(result.plan, base, progress)
                     // An empty commit marks the base as existing after the first run (rule 7 then lifts).
                     baseStore.commit(emptyList())
                     SyncOutcome.Completed(result.plan, report)

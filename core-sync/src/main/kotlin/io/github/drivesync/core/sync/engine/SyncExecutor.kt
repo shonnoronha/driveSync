@@ -32,9 +32,13 @@ class SyncExecutor(
     suspend fun execute(
         plan: SyncPlan,
         base: BaseSnapshot?,
+        progress: SyncProgressListener = SyncProgressListener.NONE,
     ): ExecutionReport {
         val baseByPath = base?.entries.orEmpty().associateBy { it.path }
         val blocked = mutableListOf<RelPath>()
+        val total = plan.actions.count(SyncProgress::counts)
+        var done = 0
+        progress.onProgress(SyncProgress.Transferring(done, total))
         val results =
             plan.actions.map { action ->
                 val touched = action.touchedPaths()
@@ -46,6 +50,7 @@ class SyncExecutor(
                         runCatchingAction { perform(action, baseByPath) }
                     }
                 if (outcome != ActionOutcome.Done) blocked += touched
+                if (SyncProgress.counts(action)) progress.onProgress(SyncProgress.Transferring(++done, total))
                 ActionResult(action, outcome)
             }
         return ExecutionReport(results)

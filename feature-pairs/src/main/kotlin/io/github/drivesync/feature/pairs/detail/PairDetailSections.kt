@@ -48,6 +48,7 @@ import io.github.drivesync.feature.pairs.add.AddPairRules
 import io.github.drivesync.feature.pairs.add.label
 import io.github.drivesync.feature.pairs.home.PairItem
 import io.github.drivesync.feature.pairs.home.PairState
+import io.github.drivesync.feature.pairs.home.SyncProgressRow
 import io.github.drivesync.feature.pairs.home.label
 import io.github.drivesync.feature.pairs.home.tone
 
@@ -61,6 +62,9 @@ internal fun StatusSection(
     DsCard(Modifier.padding(horizontal = Tokens.pageInset, vertical = Tokens.gapSm)) {
         Column(Modifier.padding(Tokens.rowPaddingH), verticalArrangement = Arrangement.spacedBy(Tokens.gapMd)) {
             StatusChip(pair.state.label(), pair.state.tone())
+            if (pair.state == PairState.SYNCING) {
+                SyncProgressRow(pair.progress)
+            }
             pair.detail
                 ?.takeIf { pair.state == PairState.NEEDS_ATTENTION || pair.state == PairState.CONFIRM_DELETES }
                 ?.let {
