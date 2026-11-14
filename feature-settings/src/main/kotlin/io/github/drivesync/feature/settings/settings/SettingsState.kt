@@ -31,7 +31,7 @@ object SettingsChoices {
     val INTERVALS = listOf(15, 30, 60, 120, 360, 720, 1440)
     val LOG_RETENTION_DAYS = listOf(7, 30, 90, 365)
 
-    /** Placeholder until the repository is published (no remote yet). */
-    const val SOURCE_URL = "https://github.com/drivesync/drivesync"
+    /** The public repository: About links to it and to its issues. */
+    const val SOURCE_URL = "https://github.com/shonnoronha/driveSync"
     const val ISSUES_URL = "$SOURCE_URL/issues"
 }
