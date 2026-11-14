@@ -5,6 +5,7 @@ import io.github.drivesync.core.sync.model.SyncDirection
 import io.github.drivesync.feature.pairs.add.AddPairRules
 import io.github.drivesync.feature.pairs.add.AddPairUiState
 import io.github.drivesync.feature.pairs.add.AddStep
+import io.github.drivesync.feature.pairs.add.DriveTarget
 import io.github.drivesync.feature.pairs.add.ExistingPair
 import io.github.drivesync.feature.pairs.add.FirstSyncPreview
 import io.github.drivesync.feature.pairs.add.FolderProblem
@@ -77,5 +78,22 @@ class AddPairRulesTest {
         )
         assertFalse(AddPairRules.mirrorAllowed(SyncDirection.TWO_WAY))
         assertTrue(AddPairRules.mirrorAllowed(SyncDirection.UPLOAD_ONLY))
+    }
+
+    @Test
+    fun `same-named Drive folder is suggested`() {
+        val notes = PairFolder("f1", "Notes", "p1")
+        val other = PairFolder("f2", "Music", null)
+        val target = AddPairRules.suggestedTarget(" notes", listOf(other, notes))
+        assertEquals(DriveTarget.Existing(notes), target)
+        assertEquals(DriveTarget.New, AddPairRules.suggestedTarget("Photos", listOf(other, notes)))
+    }
+
+    @Test
+    fun `suggested target is flagged until chosen`() {
+        val linked = AddPairUiState(target = DriveTarget.Existing(PairFolder("f1", "Notes", "p1")))
+        assertTrue(linked.targetSuggested)
+        assertFalse(linked.copy(targetChosen = true).targetSuggested)
+        assertFalse(AddPairUiState().targetSuggested)
     }
 }

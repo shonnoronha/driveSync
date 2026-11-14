@@ -47,13 +47,14 @@ class AddPairViewModel
                 val existing = pairs.pairs().map { ExistingPair(it.name, it.localTreeUri) }
                 val location = TreeUris.location(treeUri)
                 mutable.update {
-                    it.copy(
-                        treeUri = treeUri,
-                        folderPath = location?.path ?: treeUri,
-                        onInternalStorage = location?.onInternalStorage ?: true,
-                        problems = AddPairRules.folderProblems(treeUri, existing, trees.persistedCount()),
-                        name = it.name.ifBlank { TreeUris.folderName(treeUri).orEmpty() },
-                    )
+                    it
+                        .copy(
+                            treeUri = treeUri,
+                            folderPath = location?.path ?: treeUri,
+                            onInternalStorage = location?.onInternalStorage ?: true,
+                            problems = AddPairRules.folderProblems(treeUri, existing, trees.persistedCount()),
+                            name = it.name.ifBlank { TreeUris.folderName(treeUri).orEmpty() },
+                        ).withSuggestedTarget()
                 }
             }
         }
@@ -63,7 +64,7 @@ class AddPairViewModel
         fun onTarget(target: DriveTarget) =
             mutable.update {
                 val name = if (target is DriveTarget.Existing && it.name.isBlank()) target.folder.name else it.name
-                it.copy(target = target, name = name)
+                it.copy(target = target, targetChosen = true, name = name)
             }
 
         fun onDirection(direction: SyncDirection) =
@@ -97,10 +98,18 @@ class AddPairViewModel
             val rootId = settings.current().rootFolderId ?: return
             try {
                 val used = pairs.pairs().map { it.driveFolderId }.toSet()
-                mutable.update { it.copy(linkableFolders = AddPairRules.linkable(folders.pairFolders(rootId), used)) }
+                val linkable = AddPairRules.linkable(folders.pairFolders(rootId), used)
+                mutable.update { it.copy(linkableFolders = linkable).withSuggestedTarget() }
             } catch (_: IOException) {
                 // Offline: the user can still create a new folder.
             }
+        }
+
+        /** The folder list loads in the background, so this runs after both the pick and the load. */
+        private fun AddPairUiState.withSuggestedTarget(): AddPairUiState {
+            val uri = treeUri ?: return this
+            if (targetChosen) return this
+            return copy(target = AddPairRules.suggestedTarget(TreeUris.folderName(uri).orEmpty(), linkableFolders))
         }
 
         private suspend fun countFiles() {

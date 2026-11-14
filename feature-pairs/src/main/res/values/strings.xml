@@ -45,6 +45,7 @@
     <string name="add_name_hint">Its Drive folder is created inside \"Drive Sync\" with this name.</string>
     <string name="add_target_new">Create a new Drive folder</string>
     <string name="add_target_existing">Link an existing Drive Sync folder</string>
+    <string name="add_target_suggested">This folder is already in Drive Sync, so it is linked instead of copied again. Pick "Create a new Drive folder" to keep them apart.</string>
     <string name="add_target_existing_hint">Use this after reinstalling, or to sync the same folder on another phone.</string>
     <string name="add_options_title">How should it sync?</string>
     <string name="add_direction_two_way_body">Changes on either side are copied to the other. Deletes go to the trash.</string>

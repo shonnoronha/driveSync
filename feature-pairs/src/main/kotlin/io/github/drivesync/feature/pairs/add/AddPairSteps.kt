@@ -120,7 +120,9 @@ internal fun NameStep(
     }
     if (state.linkableFolders.isNotEmpty()) {
         Text(
-            stringResource(R.string.add_target_existing_hint),
+            stringResource(
+                if (state.targetSuggested) R.string.add_target_suggested else R.string.add_target_existing_hint,
+            ),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = Tokens.pageInset + Tokens.gapLg),

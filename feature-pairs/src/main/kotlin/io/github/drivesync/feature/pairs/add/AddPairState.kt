@@ -54,6 +54,8 @@ data class AddPairUiState(
     val problems: List<FolderProblem> = emptyList(),
     val name: String = "",
     val target: DriveTarget = DriveTarget.New,
+    /** Whether the user picked [target] themselves; until then the app may suggest one. */
+    val targetChosen: Boolean = false,
     val linkableFolders: List<PairFolder> = emptyList(),
     val direction: SyncDirection = SyncDirection.DEFAULT,
     val conflictPolicy: ConflictPolicy = ConflictPolicy.DEFAULT,
@@ -63,6 +65,9 @@ data class AddPairUiState(
     val error: String? = null,
     val createdPairId: String? = null,
 ) {
+    /** The app chose to link an existing Drive folder with the same name (see [AddPairRules.suggestedTarget]). */
+    val targetSuggested: Boolean get() = !targetChosen && target is DriveTarget.Existing
+
     val canContinue: Boolean
         get() =
             !working &&
@@ -108,6 +113,19 @@ object AddPairRules {
         folders: List<PairFolder>,
         usedFolderIds: Set<String>,
     ): List<PairFolder> = folders.filter { it.folderId !in usedFolderIds }
+
+    /**
+     * After a reinstall, cleared data or on a second phone, the folder's Drive copy is already in Drive Sync.
+     * Linking it by default avoids a duplicate "Name (2)" folder (PRD 3.10 "find, don't duplicate").
+     */
+    fun suggestedTarget(
+        folderName: String,
+        linkable: List<PairFolder>,
+    ): DriveTarget =
+        linkable
+            .firstOrNull { it.name.equals(folderName.trim(), ignoreCase = true) }
+            ?.let { DriveTarget.Existing(it) }
+            ?: DriveTarget.New
 
     /** Mirror deletions only means something for one-way pairs (PRD 3.9). */
     fun mirrorAllowed(direction: SyncDirection): Boolean = direction != SyncDirection.TWO_WAY
