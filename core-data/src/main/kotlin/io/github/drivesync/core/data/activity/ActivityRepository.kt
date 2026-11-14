@@ -32,6 +32,17 @@ class ActivityRepository
 
         fun observeSkipped(pairId: String): Flow<List<SkippedEntity>> = db.pairItems().observeSkipped(pairId)
 
+        /** Paths whose transfer failed in the run that finished at [lastSyncAt], with the error message. */
+        suspend fun failedFiles(
+            pairId: String,
+            lastSyncAt: Long,
+        ): Map<String, String?> =
+            db
+                .activity()
+                .failedFiles(pairId, lastSyncAt)
+                .mapNotNull { e -> e.path?.let { it to e.detail } }
+                .toMap()
+
         fun observeResolutions(): Flow<List<ResolutionEntity>> = db.resolutions().observeResolutions()
 
         /** Records the user's answer to a pending conflict; the pair's next run applies it. */

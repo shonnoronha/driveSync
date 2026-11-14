@@ -97,4 +97,40 @@
     <string name="add_drive_folder">Drive folder</string>
     <string name="detail_access_lost_hint">Android removes an app\'s access when a folder is renamed or moved. Choose the folder again to continue; nothing is deleted.</string>
     <string name="detail_give_access">Give access again</string>
+    <string name="detail_files">Files</string>
+    <string name="detail_files_body">See which files are synced</string>
+    <string name="files_title">Files</string>
+    <string name="files_explainer">Changes on your phone show here right away. Changes made in Drive show after the next sync.</string>
+    <string name="files_syncing">Syncing…</string>
+    <string name="files_unreadable">Can\'t read the phone folder</string>
+    <plurals name="files_all_synced">
+        <item quantity="one">%1$d file synced</item>
+        <item quantity="other">All %1$d files synced</item>
+    </plurals>
+    <plurals name="files_not_synced">
+        <item quantity="one">%1$d of %2$d file not synced</item>
+        <item quantity="other">%1$d of %2$d files not synced</item>
+    </plurals>
+    <plurals name="files_count">
+        <item quantity="one">%1$d file</item>
+        <item quantity="other">%1$d files</item>
+    </plurals>
+    <string name="files_only_not_synced">Only not synced</string>
+    <string name="files_folder_empty">Empty</string>
+    <string name="files_folder_synced">%1$s · all synced</string>
+    <string name="files_folder_not_synced">%1$s · %2$d not synced</string>
+    <string name="files_status_synced">Synced</string>
+    <string name="files_status_new">New on phone, not synced yet</string>
+    <string name="files_status_changed">Changed on phone since the last sync</string>
+    <string name="files_status_removed">Removed from phone since the last sync</string>
+    <string name="files_status_conflict">Conflict: tap to choose a version</string>
+    <string name="files_status_failed">Failed; retried on the next sync</string>
+    <string name="files_status_failed_because">Failed: %1$s</string>
+    <string name="files_status_skipped">Not synced: only on Drive, with no file content</string>
+    <string name="files_empty">This folder is empty</string>
+    <string name="files_empty_body">Add files on your phone and they are synced on the next run.</string>
+    <string name="files_empty_all_synced">Everything here is synced</string>
+    <string name="files_empty_all_synced_body">No file in this folder is waiting to sync.</string>
+    <string name="files_show_all">Show all files</string>
+    <string name="files_check_again">Check again</string>
 </resources>

@@ -110,6 +110,13 @@ interface ActivityDao {
         limit: Int,
     ): Flow<List<ActivityEntity>>
 
+    /** Files whose transfer failed in the run recorded at [time] (a run stamps all its entries alike). */
+    @Query("SELECT * FROM activity WHERE pairId = :pairId AND time = :time AND kind = 'FAILED' AND path IS NOT NULL")
+    suspend fun failedFiles(
+        pairId: String,
+        time: Long,
+    ): List<ActivityEntity>
+
     @Query("DELETE FROM activity WHERE time < :before")
     suspend fun deleteOlderThan(before: Long): Int
 }

@@ -27,6 +27,7 @@ import io.github.drivesync.feature.conflicts.ConflictsRoute
 import io.github.drivesync.feature.pairs.add.AddPairRoute
 import io.github.drivesync.feature.pairs.detail.PairDetailRoute
 import io.github.drivesync.feature.pairs.detail.PairDetailViewModel
+import io.github.drivesync.feature.pairs.files.FilesRoute
 import io.github.drivesync.feature.pairs.home.HomeRoute
 import io.github.drivesync.feature.settings.onboarding.OnboardingRoute
 import io.github.drivesync.feature.settings.settings.SettingsRoute
@@ -73,7 +74,15 @@ fun DriveSyncNavHost(
                 )
             }
             composable(Routes.PAIR, listOf(navArgument(PairDetailViewModel.PAIR_ID) { type = NavType.StringType })) {
-                PairDetailRoute(onBack = { nav.popBackStack() }, onOpenActivity = { nav.switchTab(Tab.ACTIVITY) })
+                val pairId = it.arguments?.getString(PairDetailViewModel.PAIR_ID).orEmpty()
+                PairDetailRoute(
+                    onBack = { nav.popBackStack() },
+                    onOpenActivity = { nav.switchTab(Tab.ACTIVITY) },
+                    onOpenFiles = { nav.navigate(Routes.files(pairId)) },
+                )
+            }
+            composable(Routes.FILES, listOf(navArgument(PairDetailViewModel.PAIR_ID) { type = NavType.StringType })) {
+                FilesRoute(onBack = { nav.popBackStack() }, onOpenConflicts = { nav.switchTab(Tab.CONFLICTS) })
             }
             composable(Routes.CONFLICTS) { ConflictsRoute() }
             composable(Routes.ACTIVITY) { ActivityRoute() }

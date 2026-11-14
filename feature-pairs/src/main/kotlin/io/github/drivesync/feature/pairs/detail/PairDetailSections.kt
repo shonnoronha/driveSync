@@ -134,7 +134,10 @@ private fun ConfirmDeletesActions(actions: PairDetailActions) {
 }
 
 @Composable
-internal fun FolderSection(pair: PairItem) {
+internal fun FolderSection(
+    pair: PairItem,
+    actions: PairDetailActions,
+) {
     SettingsSectionHeader(stringResource(R.string.detail_folder))
     SettingsGroup {
         item {
@@ -149,6 +152,14 @@ internal fun FolderSection(pair: PairItem) {
                 title = "Drive Sync/${pair.name}",
                 subtitle = stringResource(R.string.detail_on_drive),
                 icon = Sym.CloudSync,
+            )
+        }
+        item {
+            SettingsRow(
+                title = stringResource(R.string.detail_files),
+                subtitle = stringResource(R.string.detail_files_body),
+                icon = Sym.CloudDone,
+                onClick = actions.onOpenFiles,
             )
         }
     }

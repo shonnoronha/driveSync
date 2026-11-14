@@ -52,7 +52,7 @@ fun PairDetailScreen(
                 .padding(bottom = 24.dp),
         ) {
             StatusSection(pair, state, actions)
-            FolderSection(pair)
+            FolderSection(pair, actions)
             OptionsSection(state, actions)
             RecentSection(state, actions)
             RemoveSection(pair.name, actions)

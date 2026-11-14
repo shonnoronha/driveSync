@@ -9,11 +9,14 @@ object Routes {
     const val HOME = "home"
     const val ADD = "add"
     const val PAIR = "pair/{${PairDetailViewModel.PAIR_ID}}"
+    const val FILES = "pair/{${PairDetailViewModel.PAIR_ID}}/files"
     const val CONFLICTS = "conflicts"
     const val ACTIVITY = "activity"
     const val SETTINGS = "settings"
 
     fun pair(id: String) = "pair/$id"
+
+    fun files(pairId: String) = "pair/$pairId/files"
 }
 
 /** The bottom navigation tabs. */

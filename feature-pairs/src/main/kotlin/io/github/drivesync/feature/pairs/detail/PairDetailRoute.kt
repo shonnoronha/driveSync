@@ -12,6 +12,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun PairDetailRoute(
     onBack: () -> Unit,
     onOpenActivity: () -> Unit,
+    onOpenFiles: () -> Unit,
     viewModel: PairDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -36,6 +37,7 @@ fun PairDetailRoute(
                 onRecreateDriveFolder = viewModel::recreateDriveFolder,
                 onRemove = viewModel::remove,
                 onOpenActivity = onOpenActivity,
+                onOpenFiles = onOpenFiles,
             ),
     )
 }

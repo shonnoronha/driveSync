@@ -3,7 +3,9 @@ package io.github.drivesync.core.data.pairs
 import io.github.drivesync.core.data.db.DriveSyncDatabase
 import io.github.drivesync.core.data.db.PairEntity
 import io.github.drivesync.core.data.db.PairStatus
+import io.github.drivesync.core.sync.model.BaseEntry
 import io.github.drivesync.core.sync.model.PairSettings
+import io.github.drivesync.core.sync.model.RelPath
 import io.github.drivesync.core.sync.store.BaseStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -24,6 +26,20 @@ class PairRepository(
     suspend fun pairs(): List<SyncPair> = db.pairs().all().map { it.toModel() }
 
     suspend fun pair(id: String): SyncPair? = db.pairs().get(id)?.toModel()
+
+    /** The pair's base snapshot as saved by the last sync; empty before the first one. */
+    suspend fun baseEntries(id: String): List<BaseEntry> =
+        db.base().entries(id).map {
+            BaseEntry(
+                path = RelPath.of(it.path),
+                isFolder = it.isFolder,
+                md5 = it.md5,
+                localSize = it.localSize,
+                localLastModified = it.localLastModified,
+                remoteFileId = it.remoteFileId,
+                remoteVersion = it.remoteVersion,
+            )
+        }
 
     /** A new id for a pair about to be created; the Drive folder is tagged with it (PRD 3.10). */
     fun newPairId(): String = newId()

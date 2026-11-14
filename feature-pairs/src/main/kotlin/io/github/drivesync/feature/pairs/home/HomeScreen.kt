@@ -199,7 +199,7 @@ private fun PairFooter(
 }
 
 @Composable
-private fun lastSynced(
+internal fun lastSynced(
     at: Long?,
     now: Long,
 ): String =

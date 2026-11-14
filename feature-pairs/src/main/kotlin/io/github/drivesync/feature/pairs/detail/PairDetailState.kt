@@ -35,4 +35,5 @@ data class PairDetailActions(
     val onRecreateDriveFolder: () -> Unit = {},
     val onRemove: (trashDriveFolder: Boolean) -> Unit = {},
     val onOpenActivity: () -> Unit = {},
+    val onOpenFiles: () -> Unit = {},
 )
