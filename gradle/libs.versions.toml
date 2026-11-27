@@ -24,9 +24,9 @@ androidxRoom = "2.8.5"
 androidxDatastore = "1.3.0"
 androidxWork = "2.12.0"
 androidxCredentials = "1.6.0"
-composeBom = "2026.09.00"
+composeBom = "2026.11.01"
 # Pinned above the BOM (1.4.0) for the Material 3 Expressive components (toggle button groups, loading indicator).
-material3 = "1.5.0-rc01"
+material3 = "1.6.0-alpha01"
 materialColorUtilities = "6.0.0"
 
 # Google
