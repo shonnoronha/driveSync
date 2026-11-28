@@ -34,10 +34,27 @@ data class MassDeleteGuard(
     val minFraction: Double = 0.10,
 )
 
+/**
+ * When automatic runs may sync this pair (FR-P4), on top of the app-wide rules. "Sync now" ignores them, as it
+ * ignores the app-wide Wi-Fi and charging rules. The engine itself never reads these.
+ */
+data class RunConditions(
+    val wifiOnly: Boolean = false,
+    val chargingOnly: Boolean = false,
+) {
+    fun allow(
+        unmeteredNetwork: Boolean,
+        charging: Boolean,
+    ): Boolean = (!wifiOnly || unmeteredNetwork) && (!chargingOnly || charging)
+}
+
 data class PairSettings(
     val direction: SyncDirection = SyncDirection.DEFAULT,
     val conflictPolicy: ConflictPolicy = ConflictPolicy.DEFAULT,
     /** One-way pairs only: propagate deletes from the source side to the destination (PRD 3.9). */
     val mirrorDeletions: Boolean = false,
     val massDeleteGuard: MassDeleteGuard = MassDeleteGuard(),
+    /** Files that should not sync (FR-P5); excluded files are never deleted on either side. */
+    val filters: FileFilters = FileFilters(),
+    val conditions: RunConditions = RunConditions(),
 )

@@ -64,6 +64,7 @@ object Sym {
     val ExpandMore = R.drawable.sym_expand_more
     val Block = R.drawable.sym_block
     val ColorFill = R.drawable.sym_format_color_fill
+    val Share = R.drawable.sym_share
 }
 
 @Composable

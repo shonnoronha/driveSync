@@ -2,9 +2,13 @@ package io.github.drivesync.feature.settings.settings
 
 import android.content.Context
 import android.content.Intent
+import android.content.IntentSender
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -19,9 +23,15 @@ import io.github.drivesync.core.data.AppDataCleaner
 import io.github.drivesync.core.data.pairs.PairRepository
 import io.github.drivesync.core.data.settings.SettingsRepository
 import io.github.drivesync.core.data.settings.ThemeMode
+import io.github.drivesync.core.drive.api.DriveClient
+import io.github.drivesync.core.drive.api.DriveStorage
+import io.github.drivesync.core.drive.auth.DriveScopes
+import io.github.drivesync.core.drive.auth.google.AuthorizationStep
 import io.github.drivesync.core.drive.auth.google.GoogleAccount
 import io.github.drivesync.core.drive.auth.google.GoogleAuth
 import io.github.drivesync.core.localstorage.saf.SafTrees
+import io.github.drivesync.core.sync.store.AccessMode
+import io.github.drivesync.core.work.AccessModeSwitcher
 import io.github.drivesync.core.work.android.SyncScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,6 +39,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.io.IOException
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -43,11 +54,50 @@ class SettingsViewModel
         private val scheduler: SyncScheduler,
         private val auth: GoogleAuth,
         private val cleaner: AppDataCleaner,
+        switcher: AccessModeSwitcher,
+        drive: DriveClient,
     ) : ViewModel() {
         private val signedOut = MutableStateFlow(false)
+        private val storage = MutableStateFlow<DriveStorage?>(null)
+
+        init {
+            // Offline or signed out: the row just stays hidden.
+            viewModelScope.launch {
+                storage.value =
+                    try {
+                        drive.storage()
+                    } catch (_: IOException) {
+                        null
+                    }
+            }
+        }
+
+        private val fullDrive =
+            FullDriveSwitch(
+                available = DriveScopes.fullDriveConfigured,
+                google =
+                    object : FullDriveGoogle<IntentSender> {
+                        override suspend fun request(): IntentSender? =
+                            when (val step = auth.authorize(account(), AccessMode.FULL_DRIVE)) {
+                                AuthorizationStep.Authorized -> null
+                                is AuthorizationStep.NeedsConsent -> step.intent.intentSender
+                            }
+
+                        override suspend fun finish(result: Any?): Boolean {
+                            auth.completeAuthorization(result as? Intent)
+                            // The user may untick Drive access on the consent screen: ask again silently to check.
+                            return auth.authorize(account(), AccessMode.FULL_DRIVE) == AuthorizationStep.Authorized
+                        }
+                    },
+                enable = switcher::enable,
+                disable = switcher::disable,
+            )
+
+        /** A Google consent screen for full Drive access, for the route to launch. */
+        val fullDriveConsent: StateFlow<IntentSender?> = fullDrive.consent
 
         val state: StateFlow<SettingsUiState> =
-            combine(settings.settings, signedOut) { app, out ->
+            combine(settings.settings, signedOut, fullDrive.message, storage) { app, out, message, quota ->
                 SettingsUiState(
                     loading = false,
                     settings = app,
@@ -58,6 +108,9 @@ class SettingsViewModel
                             .versionName
                             .orEmpty(),
                     signedOut = out,
+                    fullDriveAvailable = DriveScopes.fullDriveConfigured,
+                    fullDriveMessage = message,
+                    storage = quota,
                 )
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), SettingsUiState())
 
@@ -81,6 +134,14 @@ class SettingsViewModel
         ) = launch { settings.setAccent(seedColor, amoled) }
 
         fun setLogRetention(days: Int) = launch { settings.setLogRetentionDays(days) }
+
+        fun setFullDrive(on: Boolean) = launch { if (on) fullDrive.turnOn() else fullDrive.turnOff() }
+
+        /** Result of the consent screen; null data means the user backed out. */
+        fun onFullDriveConsent(data: Intent?) = launch { fullDrive.consentResult(data) }
+
+        private suspend fun account(): GoogleAccount =
+            GoogleAccount(checkNotNull(settings.current().accountEmail) { "not signed in" }, null)
 
         /** FR-A5: stop syncing, give back folder grants, revoke Drive access, delete app data. Files stay. */
         fun signOut() =
@@ -119,6 +180,12 @@ fun SettingsRoute(
     val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(state.signedOut) { if (state.signedOut) onSignedOut() }
+    val consent by viewModel.fullDriveConsent.collectAsStateWithLifecycle()
+    val consentLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
+            viewModel.onFullDriveConsent(it.data)
+        }
+    LaunchedEffect(consent) { consent?.let { consentLauncher.launch(IntentSenderRequest.Builder(it).build()) } }
 
     fun open(intent: Intent) = context.startActivity(intent)
     SettingsScreen(
@@ -132,6 +199,7 @@ fun SettingsRoute(
                 onTheme = viewModel::setTheme,
                 onAccent = viewModel::setAccent,
                 onLogRetention = viewModel::setLogRetention,
+                onFullDrive = viewModel::setFullDrive,
                 onOpenNotifications = {
                     open(
                         Intent(

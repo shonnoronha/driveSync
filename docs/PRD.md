@@ -134,7 +134,7 @@ The SAF ContentObserver (3.6, item 1) is a bonus when it works; no timing target
 
 ### 3.5 Conflict handling
 
-Default policy: **keep both**. The losing version is saved next to the original with a suffix such as `report (conflict 2026-11-12 14-30 Pixel).docx`, then both are synced so nothing is lost. Per-pair alternatives: newest wins, local wins, Drive wins, or ask me. Pending conflicts appear in a dedicated Conflicts screen and a notification.
+Default policy: **keep both**. In a two-way pair the Drive file is never renamed: it keeps its name, id and content (it may be shared or linked elsewhere). The phone's version is saved next to it with a suffix such as `report (conflict 2026-11-12 14-30 Pixel).docx`, then both are synced so nothing is lost. Per-pair alternatives: newest wins, local wins, Drive wins, or ask me. Pending conflicts appear in a dedicated Conflicts screen and a notification.
 
 ### 3.6 Detecting local changes on modern Android (the hard part)
 
@@ -166,7 +166,7 @@ In v1 every synced Drive folder lives inside one root folder that the app create
 - **Removing a pair:** stops syncing and never deletes data. The user explicitly chooses to keep the Drive subfolder or move it to trash.
 - **Recovery:** if the root or a pair's subfolder is trashed or deleted in Drive, the pair shows "needs attention" with the choices recreate and re-upload, or unlink. The app never silently re-creates it.
 - **Visibility limit (to verify):** with the narrow drive.file scope the app can see only files it created. Files uploaded by this app, including from the user's other devices running it, should be visible. Files added to the folder from the Drive website or other apps may not be. Phase 0 must confirm this behavior (section 11).
-- **Future Advanced mode:** the sync engine talks to Drive only through a RemoteStore interface, and access is chosen by an AccessMode setting: APP\_FOLDER (v1, drive.file scope) or FULL\_DRIVE (future: full Drive scope, any existing Drive folder, user's own OAuth client ID). v1 ships only APP\_FOLDER, with no Drive folder browser in the UI.
+- **Advanced mode (built for files added from the website):** the sync engine talks to Drive only through a RemoteStore interface, and access is chosen by an AccessMode setting: APP\_FOLDER (default, drive.file scope) or FULL\_DRIVE (full Drive scope, user's own OAuth client ID). FULL\_DRIVE is an opt-in Settings switch: pairs still live inside Drive Sync, and files added to them from the Drive website or other apps are synced. Choosing any existing Drive folder (a Drive folder browser) and the Changes API are later steps. Turning it off resets each pair's base, so the next run only merges.
 
 ### 3.9 Sync safety rules
 
@@ -212,8 +212,8 @@ Priority: **M** = must (v1), **S** = should (v1 if time), **C** = could (later).
 | FR-P1 | Create a pair: pick local folder (SAF picker), name the pair; the app creates its Drive subfolder inside Drive Sync automatically | M |
 | FR-P2 | Unlimited pairs (practically bounded by Android's persisted-URI limit, see 6.2) | M |
 | FR-P3 | Per-pair direction: **two-way (default)**, upload-only, download-only | M |
-| FR-P4 | Per-pair options: include subfolders, Wi-Fi only, charging only, sync interval, delete policy, conflict policy | M |
-| FR-P5 | Include/exclude rules (glob patterns, file types, max file size, skip hidden files) | S |
+| FR-P4 | Per-pair options: include subfolders, Wi-Fi only, charging only, sync interval, delete policy, conflict policy. Built except the per-pair interval: "Include subfolders" off hides subfolders like a skip rule (never deletes); per-folder Wi-Fi only and charging only hold back automatic runs (periodic, photo trigger, app open), while sync now and "sync all" from the home screen or tile ignore them | M |
+| FR-P5 | Include/exclude rules (glob patterns, file types, max file size, skip hidden files). Built as exclude rules per pair; excluded paths are hidden on both sides and never deleted | S |
 | FR-P6 | Pause, resume, edit and remove pairs. Removing a pair never deletes data on either side | M |
 | FR-P7 | Prevent overlapping or nested pairs that would create sync loops (validate on creation) | M |
 | FR-P8 | Detect pair problems (folder deleted or moved, permission lost, Drive folder trashed) and surface actions to fix | M |
@@ -235,16 +235,17 @@ Priority: **M** = must (v1), **S** = should (v1 if time), **C** = could (later).
 | FR-S11 | Set Drive `modifiedTime` from the local file on upload. SAF cannot set a local file's last-modified time, so sync decisions never compare timestamps across sides (3.9) | S |
 | FR-S12 | Skip Google-native files (Docs, Sheets, Slides) in v1 and list them in the activity log. Later: per-pair option to **skip**, **export** (docx/xlsx/pptx/pdf) one way, or keep a link file. They have no byte content or MD5 | M |
 | FR-S13 | Handle Drive quirks: **duplicate file names in the same folder**, shortcuts, files shared with me, files with no parent | M |
+| FR-S14 | **Rewind**: put a pair back the way it was after any earlier sync, on both sides. Built: every base change is kept as history (Room v5, grouped by run, pruned after 30 days); older content comes from Drive revisions and returns as a new version; newer files go to the trash; only files in sync on both sides are touched; a rewind is itself a point, so it can be undone | S |
 
 ### 4.4 Monitoring and feedback
 
 | ID | Requirement | Pri |
 | --- | --- | --- |
 | FR-M1 | Home screen shows each pair with status (idle, syncing with progress, paused, error, needs attention), last sync time, pending counts | M |
-| FR-M2 | Activity log per pair (uploaded, downloaded, deleted, conflicts, errors) with filtering, exportable for bug reports (paths can be redacted) | M |
+| FR-M2 | Activity log per pair (uploaded, downloaded, deleted, conflicts, errors) with filtering, exportable for bug reports (paths can be redacted). Built: "Share log" on the Activity screen, plain text through the share sheet, newest 1,000 entries with the current filter; names hidden by default as stable placeholders, emails removed | M |
 | FR-M3 | Ongoing notification while a long sync runs; separate notification channels for errors, conflicts and completion summaries | M |
-| FR-M4 | Quick Settings tile and home-screen widget (Glance) for status and sync-now | C |
-| FR-M5 | Storage view: Drive quota usage and warning when Drive is nearly full | C |
+| FR-M4 | Quick Settings tile and home-screen widget (Glance) for status and sync-now. Tile built (status, last sync, tap to sync; opens the app when a folder needs the user); widget not yet | C |
+| FR-M5 | Storage view: Drive quota usage and warning when Drive is nearly full. Built in Settings (warning from 90%) | C |
 
 ### 4.5 Settings
 
@@ -301,7 +302,7 @@ The trade-off: `drive.file` only reaches files the app created or the user expli
 - Files added inside a Drive Sync subfolder from the Drive website or other apps may be invisible to the app. This is my reading of the scope definition and must be confirmed in the Phase 0 spike. If confirmed, v1 documents it clearly and the Advanced mode removes it.
 - Files the app uploaded from the user's other devices should remain visible, which keeps multi-device sync working.
 
-**Planned Advanced mode (not built in v1):** the full `drive` scope with the user's own OAuth client ID, which allows choosing any existing Drive folder. It is a restricted scope, so an official public client would need Google verification and the annual assessment; a bring-your-own-client-ID setup avoids that for personal use. The code stays ready for it through the RemoteStore interface and the AccessMode setting, so adding it later needs a Drive folder picker and an auth provider, not a new sync engine.
+**Advanced mode (built, opt-in):** the full `drive` scope with the user's own OAuth client ID. The first version syncs files added to a pair's Drive folder from the Drive website or other apps (the device test confirmed `drive.file` cannot see them); choosing any existing Drive folder comes later. It is a restricted scope, so an official public client would need Google verification and the annual assessment; a bring-your-own-client-ID setup avoids that for personal use. The code stays ready for it through the RemoteStore interface and the AccessMode setting, so adding it later needs a Drive folder picker and an auth provider, not a new sync engine.
 
 ## 7. High-level architecture
 
@@ -381,7 +382,7 @@ These are estimates for one experienced developer and will vary with team size.
 
 | ID | Risk | Mitigation |
 | --- | --- | --- |
-| R1 | drive.file cannot see Drive files the app did not create (for example files added from the Drive website) | Early spike to confirm the behavior; Drive access behind a RemoteStore interface so an Advanced mode (full Drive, own client ID) can be added later; `drive.file` is the v1 scope; document the limitation clearly |
+| R1 | drive.file cannot see Drive files the app did not create (for example files added from the Drive website) | Confirmed on a device; `drive.file` stays the default and the limit is documented; the opt-in Advanced mode (full Drive, own client ID) syncs those files |
 | R2 | No reliable change notifications for SAF folders | Layered detection plus periodic reconciliation |
 | R3 | OEM battery optimization kills background work | In-app guidance, battery exemption flow, catch-up on app open |
 | R4 | Data loss from sync bugs (especially deletes and conflicts) | Trash instead of delete, mass-delete guard, keep-both default, extensive tests |

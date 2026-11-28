@@ -193,6 +193,8 @@ class SyncRecorder(
 
             is SyncAction.RecycleLocal -> ActivityKind.RECYCLED_ON_PHONE to null
 
+            is SyncAction.Restore -> ActivityKind.RESTORED to null
+
             // Base bookkeeping only.
             is SyncAction.Link, is SyncAction.ForgetBase -> null
         }
@@ -202,7 +204,11 @@ class SyncRecorder(
         from: String,
     ): Pair<ActivityKind, String?> =
         ActivityKind.MOVED to
-            "from $from" + if (reason == MoveReason.DETECTED_MOVE) "" else " (${reason.name.lowercase()})"
+            when (reason) {
+                MoveReason.DETECTED_MOVE -> "from $from"
+                MoveReason.CONFLICT_COPY -> "from $from (kept as a conflict copy)"
+                MoveReason.CLASH_RESOLVED -> "from $from (its Drive name is free again)"
+            }
 
     private fun PauseReason.describe(): String =
         when (this) {

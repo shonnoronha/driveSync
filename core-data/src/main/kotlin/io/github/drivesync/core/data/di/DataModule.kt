@@ -21,7 +21,15 @@ object DataModule {
     @Singleton
     fun database(
         @ApplicationContext context: Context,
-    ): DriveSyncDatabase = Room.databaseBuilder(context, DriveSyncDatabase::class.java, DriveSyncDatabase.NAME).build()
+    ): DriveSyncDatabase =
+        Room
+            .databaseBuilder(context, DriveSyncDatabase::class.java, DriveSyncDatabase.NAME)
+            .addMigrations(
+                DriveSyncDatabase.MIGRATION_1_2,
+                DriveSyncDatabase.MIGRATION_2_3,
+                DriveSyncDatabase.MIGRATION_3_4,
+                DriveSyncDatabase.MIGRATION_4_5,
+            ).build()
 
     @Provides
     @Singleton

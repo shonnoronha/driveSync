@@ -1,6 +1,7 @@
 package io.github.drivesync.feature.pairs.detail
 
 import io.github.drivesync.core.sync.model.ConflictPolicy
+import io.github.drivesync.core.sync.model.FileFilters
 import io.github.drivesync.core.sync.model.PairSettings
 import io.github.drivesync.core.sync.model.SyncDirection
 import io.github.drivesync.feature.activity.ActivityRow
@@ -19,6 +20,8 @@ data class PairDetailUiState(
     val error: String? = null,
     /** Android revoked the folder grant (e.g. the folder was renamed or moved): only re-picking it helps. */
     val accessLost: Boolean = false,
+    /** Google access lapsed or was revoked (FR-A4): granting it again resumes every folder. */
+    val googleAccessNeeded: Boolean = false,
 )
 
 /** Callbacks of the pair detail screen. */
@@ -28,12 +31,17 @@ data class PairDetailActions(
     val onEnabled: (Boolean) -> Unit = {},
     val onDirection: (SyncDirection) -> Unit = {},
     val onPolicy: (ConflictPolicy) -> Unit = {},
+    val onFilters: (FileFilters) -> Unit = {},
+    /** Any other change to the pair's settings. */
+    val onEdit: ((PairSettings) -> PairSettings) -> Unit = {},
     val onMirror: (Boolean) -> Unit = {},
     val onConfirmDeletes: () -> Unit = {},
     val onRestoreInstead: () -> Unit = {},
     val onChooseFolderAgain: () -> Unit = {},
     val onRecreateDriveFolder: () -> Unit = {},
+    val onGrantGoogleAccess: () -> Unit = {},
     val onRemove: (trashDriveFolder: Boolean) -> Unit = {},
     val onOpenActivity: () -> Unit = {},
     val onOpenFiles: () -> Unit = {},
+    val onOpenRewind: () -> Unit = {},
 )

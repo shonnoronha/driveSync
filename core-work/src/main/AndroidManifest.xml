@@ -12,5 +12,17 @@
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync"
             tools:node="merge" />
+
+        <!-- Quick Settings tile (FR-M4): sync status and sync now. -->
+        <service
+            android:name="io.github.drivesync.core.work.android.SyncTileService"
+            android:exported="true"
+            android:icon="@drawable/tile_sync"
+            android:label="@string/tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

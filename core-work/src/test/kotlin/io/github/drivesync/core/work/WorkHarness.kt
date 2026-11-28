@@ -7,6 +7,7 @@ import androidx.test.core.app.ApplicationProvider
 import io.github.drivesync.core.data.activity.ActivityRepository
 import io.github.drivesync.core.data.activity.SyncRecorder
 import io.github.drivesync.core.data.db.DriveSyncDatabase
+import io.github.drivesync.core.data.history.HistoryRepository
 import io.github.drivesync.core.data.pairs.PairRepository
 import io.github.drivesync.core.data.pairs.SyncPair
 import io.github.drivesync.core.data.settings.SettingsRepository
@@ -64,9 +65,14 @@ class WorkHarness(
             ).allowMainThreadQueries()
             .build()
     var now: LocalDateTime = LocalDateTime.of(2026, 11, 13, 9, 30)
+    var onWifi = true
+    var pluggedIn = true
     private var ids = 0
     private val dir: File = Files.createTempDirectory("settings").toFile()
-    val pairs = PairRepository(db, { 0L }, { "pair-${++ids}" })
+
+    /** Run times for the Rewind history; 0 unless a test needs separate points. */
+    var clock = 0L
+    val pairs = PairRepository(db, { clock }, { "pair-${++ids}" })
     val settings =
         SettingsRepository(PreferenceDataStoreFactory.create(scope = scope) { File(dir, "s.preferences_pb") })
     val locals = mutableMapOf<String, FakeLocalStore>()
@@ -79,18 +85,24 @@ class WorkHarness(
             override fun now(): LocalDateTime = this@WorkHarness.now
 
             override val defaultDeviceName = "Pixel"
+
+            override fun unmeteredNetwork() = onWifi
+
+            override fun charging() = pluggedIn
         }
 
     private val stores =
         object : SyncStores {
             override fun local(pair: SyncPair): LocalStore = locals.getValue(pair.id)
 
-            override fun remote(pair: SyncPair): RemoteStore = remotes.getValue(pair.id)
+            override suspend fun remote(pair: SyncPair): RemoteStore = remotes.getValue(pair.id)
         }
 
     val activity = ActivityRepository(db)
-    val runner = PairSyncRunner(pairs, SyncRecorder(db) { 0L }, activity, stores, environment)
-    val coordinator = SyncCoordinator(pairs, settings, runner, notifier, ActivityRepository(db), environment)
+    val history = HistoryRepository(db)
+    val runner = PairSyncRunner(pairs, SyncRecorder(db) { 0L }, activity, stores, environment, history)
+    val coordinator =
+        SyncCoordinator(pairs, settings, runner, notifier, ActivityRepository(db), environment, history)
 
     suspend fun signIn() = settings.setAccount("me@example.com", "root")
 

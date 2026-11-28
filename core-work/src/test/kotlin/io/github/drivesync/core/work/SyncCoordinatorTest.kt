@@ -4,6 +4,8 @@ import io.github.drivesync.core.data.db.PairStatus
 import io.github.drivesync.core.drive.api.DriveException
 import io.github.drivesync.core.drive.auth.AuthRequiredException
 import io.github.drivesync.core.sync.fakes.LocalOp
+import io.github.drivesync.core.sync.model.PairSettings
+import io.github.drivesync.core.sync.model.RunConditions
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -63,6 +65,46 @@ class SyncCoordinatorTest {
             h.coordinator.syncAll(filter = { MediaFolders.isMediaTree(it.localTreeUri) })
             assertEquals("p", h.drives.getValue(camera).content("p.jpg"))
             assertEquals(null, h.drives.getValue(notes).content("n.md"))
+        }
+
+    @Test
+    fun `folder rules hold back automatic runs`() =
+        test { h ->
+            h.signIn()
+            val wifi = h.addPair("Wifi")
+            val plug = h.addPair("Plug")
+            val any = h.addPair("Any")
+            h.pairs.updateSettings(wifi, PairSettings(conditions = RunConditions(wifiOnly = true)))
+            h.pairs.updateSettings(plug, PairSettings(conditions = RunConditions(chargingOnly = true)))
+            listOf(wifi, plug, any).forEach { h.locals.getValue(it).write("x.md", it) }
+            h.onWifi = false
+            h.pluggedIn = false
+
+            h.coordinator.syncAll()
+            assertEquals(null, h.drives.getValue(wifi).content("x.md"))
+            assertEquals(null, h.drives.getValue(plug).content("x.md"))
+            assertEquals(any, h.drives.getValue(any).content("x.md"))
+
+            h.onWifi = true
+            h.coordinator.syncAll()
+            assertEquals(wifi, h.drives.getValue(wifi).content("x.md"))
+            assertEquals(null, h.drives.getValue(plug).content("x.md"))
+
+            h.coordinator.syncAll(manual = true)
+            assertEquals(plug, h.drives.getValue(plug).content("x.md"))
+        }
+
+    @Test
+    fun `sync now ignores folder rules`() =
+        test { h ->
+            h.signIn()
+            val id = h.addPair("Wifi")
+            h.pairs.updateSettings(id, PairSettings(conditions = RunConditions(wifiOnly = true, chargingOnly = true)))
+            h.locals.getValue(id).write("x.md", "x")
+            h.onWifi = false
+            h.pluggedIn = false
+            h.coordinator.syncPair(id, false)
+            assertEquals("x", h.drives.getValue(id).content("x.md"))
         }
 
     @Test

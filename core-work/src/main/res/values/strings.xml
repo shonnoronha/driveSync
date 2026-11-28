@@ -17,4 +17,12 @@
         <item quantity="one">%2$s: %1$d file failed and will be retried</item>
         <item quantity="other">%2$s: %1$d files failed and will be retried</item>
     </plurals>
+    <string name="tile_label">Drive Sync</string>
+    <string name="tile_set_up">Tap to set up</string>
+    <string name="tile_syncing">Syncing…</string>
+    <string name="tile_needs_you">Needs your attention</string>
+    <string name="tile_paused">Paused</string>
+    <string name="tile_failed">Some files failed</string>
+    <string name="tile_synced">Synced %1$s</string>
+    <string name="tile_tap_sync">Tap to sync</string>
 </resources>

@@ -8,8 +8,10 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import io.github.drivesync.core.drive.auth.AccessModeSource
 import io.github.drivesync.core.work.SyncEnvironment
 import io.github.drivesync.core.work.SyncNotifier
+import io.github.drivesync.core.work.SyncRuns
 import io.github.drivesync.core.work.SyncStores
 
 @Module
@@ -23,6 +25,12 @@ abstract class WorkModule {
 
     @Binds
     abstract fun notifier(impl: AndroidSyncNotifier): SyncNotifier
+
+    @Binds
+    abstract fun accessMode(impl: SettingsAccessMode): AccessModeSource
+
+    @Binds
+    abstract fun runs(impl: WorkManagerSyncRuns): SyncRuns
 
     companion object {
         @Provides

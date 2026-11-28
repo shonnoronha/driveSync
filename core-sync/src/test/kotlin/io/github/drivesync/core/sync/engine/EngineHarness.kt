@@ -6,6 +6,7 @@ import io.github.drivesync.core.sync.fakes.FakeRemoteStore
 import io.github.drivesync.core.sync.fakes.InMemoryBaseStore
 import io.github.drivesync.core.sync.fakes.LocalOp
 import io.github.drivesync.core.sync.fakes.RemoteOp
+import io.github.drivesync.core.sync.model.BaseEntry
 import io.github.drivesync.core.sync.model.PairSettings
 import io.github.drivesync.core.sync.model.RelPath
 import io.github.drivesync.core.sync.plan.SyncAction
@@ -54,6 +55,22 @@ class Phone(
         settings: PairSettings = PairSettings(),
         confirm: Boolean = false,
     ): SyncOutcome {
+        installHooks()
+        return engine.sync(settings, testStamp, confirm)
+    }
+
+    /** The synced state right now: a point to rewind to later. */
+    suspend fun point(): Map<RelPath, BaseEntry> = base.load()!!.entries.associateBy { it.path }
+
+    suspend fun rewind(
+        target: Map<RelPath, BaseEntry>,
+        settings: PairSettings = PairSettings(),
+    ): RewindOutcome {
+        installHooks()
+        return engine.rewind(target, settings)
+    }
+
+    private fun installHooks() {
         localOps.clear()
         remoteOps.clear()
         local.beforeOp = { op, p ->
@@ -65,7 +82,6 @@ class Phone(
             remoteOps += op to p?.value
             onRemote?.invoke(op, p)
         }
-        return engine.sync(settings, testStamp, confirm)
     }
 
     /** Runs a sync that must complete and returns its outcome. */

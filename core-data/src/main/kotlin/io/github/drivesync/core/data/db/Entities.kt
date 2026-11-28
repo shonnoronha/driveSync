@@ -30,6 +30,18 @@ data class PairEntity(
     val statusDetail: String?,
     val lastSyncAt: Long?,
     val createdAt: Long,
+    /** FR-P5 exclude patterns, one per line; null means none. Since v3. */
+    val excludePatterns: String? = null,
+    /** FR-P5 size limit in bytes; null means no limit. Since v3. */
+    val maxFileSize: Long? = null,
+    /** FR-P5: skip names starting with a dot; null means false. Since v3. */
+    val skipHidden: Boolean? = null,
+    /** FR-P4: false syncs only the top level; null means true. Since v4. */
+    val includeSubfolders: Boolean? = null,
+    /** FR-P4: automatic runs wait for an unmetered network; null means false. Since v4. */
+    val wifiOnly: Boolean? = null,
+    /** FR-P4: automatic runs wait for the charger; null means false. Since v4. */
+    val chargingOnly: Boolean? = null,
 )
 
 enum class PairStatus {
@@ -60,6 +72,8 @@ data class BaseEntryEntity(
     val localLastModified: Long,
     val remoteFileId: String?,
     val remoteVersion: Long,
+    /** The Drive name when it differs from [path] (a Drive name clash kept under a conflict name). Since v2. */
+    val remotePath: String? = null,
 )
 
 /** Activity log (FR-M2). */
@@ -88,6 +102,9 @@ enum class ActivityKind {
     FAILED,
     PAUSED,
     WAITING_FOR_CONFIRMATION,
+
+    /** Rewind put an older version back, on both sides. */
+    RESTORED,
 }
 
 /** Conflicts of the latest run (replaced every run), for the conflicts screen. */
@@ -128,3 +145,43 @@ data class SkippedEntity(
     val path: String,
     val reason: SkipReason,
 )
+
+/**
+ * Rewind: every change of the base, in order (the base itself keeps only the latest state). [present] false means
+ * the path left the base; the entry columns are then unused. Since v5.
+ */
+@Entity(
+    tableName = "base_history",
+    foreignKeys = [ForeignKey(PairEntity::class, ["id"], ["pairId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index(value = ["pairId", "runAt"])],
+)
+data class BaseHistoryEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val pairId: String,
+    /** The run (sync or rewind) the change belongs to. */
+    val runAt: Long,
+    val path: String,
+    val present: Boolean,
+    val isFolder: Boolean = false,
+    val md5: String? = null,
+    val localSize: Long = 0,
+    val localLastModified: Long = 0,
+    val remoteFileId: String? = null,
+    val remoteVersion: Long = 0,
+    val remotePath: String? = null,
+)
+
+internal fun BaseEntryEntity.toHistory(runAt: Long) =
+    BaseHistoryEntity(
+        pairId = pairId,
+        runAt = runAt,
+        path = path,
+        present = true,
+        isFolder = isFolder,
+        md5 = md5,
+        localSize = localSize,
+        localLastModified = localLastModified,
+        remoteFileId = remoteFileId,
+        remoteVersion = remoteVersion,
+        remotePath = remotePath,
+    )

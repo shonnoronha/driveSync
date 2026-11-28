@@ -24,6 +24,7 @@ object DriveErrors {
             code == HTTP_NOT_FOUND -> DriveException.NotFound(message)
             reason == "storageQuotaExceeded" -> DriveException.QuotaExceeded(message)
             reason in RATE_LIMITS || code == HTTP_TOO_MANY_REQUESTS -> DriveException.RateLimited(message)
+            code == HTTP_FORBIDDEN && reason in NO_PERMISSION -> DriveException.NoPermission(NO_PERMISSION_TEXT)
             else -> DriveException.Http(code, reason, message)
         }
     }
@@ -42,5 +43,13 @@ object DriveErrors {
     private const val HTTP_UNAUTHORIZED = 401
     private const val HTTP_NOT_FOUND = 404
     private const val HTTP_TOO_MANY_REQUESTS = 429
+    private const val HTTP_FORBIDDEN = 403
     private val RATE_LIMITS = setOf("rateLimitExceeded", "userRateLimitExceeded")
+
+    /** Per-file refusals, common with full Drive access when someone else's file sits in a synced folder. */
+    private val NO_PERMISSION =
+        setOf("insufficientFilePermissions", "cannotDownloadFile", "fileNotDownloadable", "forbidden")
+    private const val NO_PERMISSION_TEXT =
+        "You don't have permission for this file on Drive. It may belong to someone else, or its owner turned " +
+            "off downloads."
 }

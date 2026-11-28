@@ -101,6 +101,8 @@ fun DsTextField(
     modifier: Modifier = Modifier,
     placeholder: String? = null,
     supportingText: String? = null,
+    /** More than 1 makes a multi-line field. */
+    minLines: Int = 1,
 ) {
     val scheme = MaterialTheme.colorScheme
     OutlinedTextField(
@@ -109,7 +111,8 @@ fun DsTextField(
         label = { Text(label) },
         placeholder = placeholder?.let { { Text(it) } },
         supportingText = supportingText?.let { { Text(it) } },
-        singleLine = true,
+        singleLine = minLines == 1,
+        minLines = minLines,
         shape = RoundedCornerShape(Tokens.radiusControl),
         colors =
             OutlinedTextFieldDefaults.colors(

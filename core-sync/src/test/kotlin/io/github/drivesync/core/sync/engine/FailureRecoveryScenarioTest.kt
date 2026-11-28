@@ -69,16 +69,16 @@ class FailureRecoveryScenarioTest {
                 val p = syncedPhone("doc.txt" to "v1")
                 p.local.write("doc.txt", "local edit")
                 p.remote.write("doc.txt", "drive edit")
-                p.onRemote = { op, path ->
-                    if (op == RemoteOp.MOVE && path?.value == "doc.txt") throw IOException("rate limited")
+                p.onLocal = { op, path ->
+                    if (op == LocalOp.MOVE && path?.value == "doc.txt") throw IOException("file is busy")
                 }
 
                 val first = p.run()
 
                 val copy = copyOf("doc.txt")
-                assertInstanceOf(ActionOutcome.Failed::class.java, first.outcomeOf<SyncAction.MoveRemote>(copy))
-                assertInstanceOf(ActionOutcome.Skipped::class.java, first.outcomeOf<SyncAction.Upload>("doc.txt"))
-                assertInstanceOf(ActionOutcome.Skipped::class.java, first.outcomeOf<SyncAction.Download>(copy))
+                assertInstanceOf(ActionOutcome.Failed::class.java, first.outcomeOf<SyncAction.MoveLocal>(copy))
+                assertInstanceOf(ActionOutcome.Skipped::class.java, first.outcomeOf<SyncAction.Upload>(copy))
+                assertInstanceOf(ActionOutcome.Skipped::class.java, first.outcomeOf<SyncAction.Download>("doc.txt"))
                 assertEquals(listOf("drive edit"), p.remote.files()["doc.txt"])
                 assertFalse(copy in p.remote.files())
                 assertEquals("local edit", p.local.content("doc.txt"))
@@ -92,8 +92,8 @@ class FailureRecoveryScenarioTest {
                         .single()
                         .resolution,
                 )
-                assertEquals("local edit", p.local.content("doc.txt"))
-                assertEquals("drive edit", p.local.content(copyOf("doc.txt")))
+                assertEquals("drive edit", p.local.content("doc.txt"))
+                assertEquals("local edit", p.local.content(copyOf("doc.txt")))
                 p.assertMirrored()
                 p.assertConverged()
             }
@@ -250,15 +250,21 @@ class FailureRecoveryScenarioTest {
                 val p = syncedPhone("doc.txt" to "v1")
                 p.local.write("doc.txt", "local edit")
                 p.remote.write("doc.txt", "drive edit")
-                p.onRemote = once(RemoteOp.UPLOAD, "doc.txt") { killed() }
+                val copy = copyOf("doc.txt")
+                p.onRemote = once(RemoteOp.UPLOAD, copy) { killed() }
 
                 p.crash()
-                assertEquals(listOf("drive edit"), p.remote.files()[copyOf("doc.txt")])
+                assertEquals("local edit", p.local.content(copy))
+                assertFalse(p.local.exists("doc.txt"))
+                assertEquals(listOf("drive edit"), p.remote.files()["doc.txt"])
+                assertNull(p.base.entry("doc.txt"), "the renamed path waits for the Drive version")
 
                 p.restart()
                 p.runClean()
-                assertEquals("local edit", p.local.content("doc.txt"))
-                assertEquals("drive edit", p.local.content(copyOf("doc.txt")))
+                assertEquals("drive edit", p.local.content("doc.txt"))
+                assertEquals("local edit", p.local.content(copy))
+                assertEquals(emptyList<String>(), p.remote.trashed())
+                assertEquals(emptyMap<String, String>(), p.local.recycled())
                 p.assertMirrored()
                 p.assertConverged()
             }

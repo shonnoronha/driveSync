@@ -34,6 +34,12 @@ interface DriveApi {
         @Query("fields") fields: String = DriveFields.FILE,
     ): Response<DriveFile>
 
+    /** Storage used and available for the whole account (FR-M5). */
+    @GET("drive/v3/about")
+    suspend fun about(
+        @Query("fields") fields: String = "storageQuota(limit,usage)",
+    ): Response<DriveAbout>
+
     @POST("drive/v3/files")
     suspend fun create(
         @Body metadata: DriveFileMetadata,
@@ -53,6 +59,22 @@ interface DriveApi {
     @GET("drive/v3/files/{id}?alt=media")
     suspend fun download(
         @Path("id") fileId: String,
+    ): Response<ResponseBody>
+
+    /** The versions Drive keeps of a file, oldest first (Rewind). */
+    @GET("drive/v3/files/{id}/revisions")
+    suspend fun revisions(
+        @Path("id") fileId: String,
+        @Query("fields") fields: String = "revisions(id,modifiedTime,md5Checksum,size,keepForever),nextPageToken",
+        @Query("pageToken") pageToken: String? = null,
+        @Query("pageSize") pageSize: Int = MAX_REVISION_PAGE_SIZE,
+    ): Response<DriveRevisionList>
+
+    @Streaming
+    @GET("drive/v3/files/{id}/revisions/{revisionId}?alt=media")
+    suspend fun downloadRevision(
+        @Path("id") fileId: String,
+        @Path("revisionId") revisionId: String,
     ): Response<ResponseBody>
 
     /** Starts a resumable upload of a new file; the session URI is in the `Location` header. */
@@ -88,6 +110,7 @@ interface DriveApi {
     companion object {
         const val BASE_URL = "https://www.googleapis.com/"
         const val MAX_PAGE_SIZE = 1000
+        const val MAX_REVISION_PAGE_SIZE = 1000
     }
 }
 

@@ -2,6 +2,7 @@ package io.github.drivesync.core.sync.fakes
 
 import io.github.drivesync.core.sync.model.RelPath
 import io.github.drivesync.core.sync.model.RemoteEntry
+import io.github.drivesync.core.sync.model.RemoteVersion
 import io.github.drivesync.core.sync.model.Snapshot
 import io.github.drivesync.core.sync.store.AccessMode
 import io.github.drivesync.core.sync.store.RemoteStore
@@ -9,7 +10,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 
-enum class RemoteOp { SCAN, STAT, LOOKUP, CREATE_FOLDER, UPLOAD, DOWNLOAD, MOVE, TRASH }
+enum class RemoteOp { SCAN, STAT, LOOKUP, CREATE_FOLDER, UPLOAD, DOWNLOAD, MOVE, TRASH, VERSIONS, DOWNLOAD_VERSION }
 
 /**
  * In-memory Drive pair folder, keyed by file id like real Drive (several files may share one path).
@@ -29,14 +30,29 @@ class FakeRemoteStore(
         var modifiedTime: Long,
         val mimeType: String,
         var trashed: Boolean = false,
+        /** Every content this file had, like Drive's revisions (head included). */
+        val revisions: MutableList<Revision> = mutableListOf(),
+    )
+
+    private class Revision(
+        val id: String,
+        val bytes: ByteArray,
+        val time: Long,
     )
 
     private val nodes = LinkedHashMap<String, Node>()
+    private var nextRevision = 1
     private var now = startTime
     private var nextId = 1
 
     /** When set, [scan] returns [Snapshot.Unavailable] (pair folder trashed, access revoked). */
     var unavailableReason: String? = null
+
+    /**
+     * Files that exist on Drive but this app can't see, like files from the Drive website under `drive.file`.
+     * Store operations skip them; the user-side helpers ([files], [content], [trashed]) still see them.
+     */
+    private val hiddenFromApp = HashSet<String>()
 
     var beforeOp: (suspend (op: RemoteOp, path: RelPath?) -> Unit)? = null
 
@@ -55,9 +71,9 @@ class FakeRemoteStore(
         if (existing.size > 1) error("several Drive files at $path; use writeDuplicate")
         val n = existing.singleOrNull()
         return if (n != null) {
-            n.bytes = content.toByteArray()
             n.version++
             n.modifiedTime = tick()
+            setContent(n, content.toByteArray())
             n.fileId
         } else {
             create(p, isFolder = false, bytes = content.toByteArray(), mime = RemoteEntry.DEFAULT_MIME_TYPE).fileId
@@ -69,6 +85,38 @@ class FakeRemoteStore(
         path: String,
         content: String,
     ): String = create(RelPath.of(path), false, content.toByteArray(), RemoteEntry.DEFAULT_MIME_TYPE).fileId
+
+    /** Edits one file by id, for when several Drive files share a name. */
+    fun writeById(
+        fileId: String,
+        content: String,
+    ) {
+        val n = nodes.getValue(fileId)
+        n.version++
+        n.modifiedTime = tick()
+        setContent(n, content.toByteArray())
+    }
+
+    /** Drive forgets all but the newest [keep] versions of a file (its 30-day / 100-version limit). */
+    fun forgetOldVersions(
+        fileId: String,
+        keep: Int = 1,
+    ) {
+        val revisions = nodes.getValue(fileId).revisions
+        while (revisions.size > keep) revisions.removeAt(0)
+    }
+
+    fun trashById(fileId: String) = trashTree(nodes.getValue(fileId))
+
+    fun renameById(
+        fileId: String,
+        to: String,
+    ) = moveTree(nodes.getValue(fileId), RelPath.of(to))
+
+    /** The app loses sight of the live entries at [path] (full Drive access turned off); they stay on Drive. */
+    fun hideFromApp(path: String) {
+        live(RelPath.of(path)).forEach { hiddenFromApp += it.fileId }
+    }
 
     fun googleDoc(path: String): String = create(RelPath.of(path), false, ByteArray(0), GOOGLE_DOC_MIME_TYPE).fileId
 
@@ -110,17 +158,17 @@ class FakeRemoteStore(
     override suspend fun scan(): Snapshot<RemoteEntry> {
         hook(RemoteOp.SCAN, null)
         unavailableReason?.let { return Snapshot.Unavailable(it) }
-        return Snapshot.Available(nodes.values.filter { !it.trashed }.map(::entry))
+        return Snapshot.Available(nodes.values.filter { !it.trashed && it.fileId !in hiddenFromApp }.map(::entry))
     }
 
     override suspend fun stat(fileId: String): RemoteEntry? {
         hook(RemoteOp.STAT, nodes[fileId]?.path)
-        return nodes[fileId]?.takeIf { !it.trashed }?.let(::entry)
+        return nodes[fileId]?.takeIf { !it.trashed && it.fileId !in hiddenFromApp }?.let(::entry)
     }
 
     override suspend fun lookup(path: RelPath): List<RemoteEntry> {
         hook(RemoteOp.LOOKUP, path)
-        return live(path).map(::entry)
+        return live(path).filter { it.fileId !in hiddenFromApp }.map(::entry)
     }
 
     override suspend fun createFolder(path: RelPath): RemoteEntry {
@@ -143,8 +191,8 @@ class FakeRemoteStore(
         val n =
             if (replacesFileId != null) {
                 val target = liveById(replacesFileId)
-                target.bytes = bytes
                 target.version++
+                setContent(target, bytes)
                 target
             } else {
                 create(path, isFolder = false, bytes = bytes, mime = RemoteEntry.DEFAULT_MIME_TYPE)
@@ -179,6 +227,24 @@ class FakeRemoteStore(
         trashTree(n)
     }
 
+    override suspend fun versions(fileId: String): List<RemoteVersion> {
+        val n = nodes[fileId]?.takeIf { it.fileId !in hiddenFromApp } ?: return emptyList()
+        hook(RemoteOp.VERSIONS, n.path)
+        if (n.isFolder || n.mimeType.startsWith(RemoteEntry.GOOGLE_APPS_MIME_PREFIX)) return emptyList()
+        return n.revisions.map { RemoteVersion(it.id, md5Hex(it.bytes), it.bytes.size.toLong(), it.time) }
+    }
+
+    override suspend fun downloadVersion(
+        fileId: String,
+        revisionId: String,
+        sink: OutputStream,
+    ) {
+        val n = nodes[fileId] ?: throw IOException("no Drive file $fileId")
+        hook(RemoteOp.DOWNLOAD_VERSION, n.path)
+        val revision = n.revisions.firstOrNull { it.id == revisionId } ?: throw IOException("no version $revisionId")
+        sink.write(downloadTransform(revision.bytes))
+    }
+
     // ---- Internals ----
 
     private suspend fun hook(
@@ -190,10 +256,19 @@ class FakeRemoteStore(
 
     private fun tick(): Long = ++now
 
+    private fun setContent(
+        n: Node,
+        bytes: ByteArray,
+    ) {
+        n.bytes = bytes
+        n.revisions += Revision("r${nextRevision++}", bytes, n.modifiedTime)
+    }
+
     private fun live(path: RelPath): List<Node> = nodes.values.filter { !it.trashed && it.path == path }
 
     private fun liveById(fileId: String): Node =
-        nodes[fileId]?.takeIf { !it.trashed } ?: throw IOException("no Drive file $fileId")
+        nodes[fileId]?.takeIf { !it.trashed && it.fileId !in hiddenFromApp }
+            ?: throw IOException("no Drive file $fileId")
 
     private fun requireParent(path: RelPath) {
         val parent = path.parent ?: return
@@ -209,6 +284,7 @@ class FakeRemoteStore(
         path.parent?.let { mkdirs(it) }
         val n = Node("f${nextId++}", path, isFolder, bytes, version = 1, modifiedTime = tick(), mimeType = mime)
         nodes[n.fileId] = n
+        if (!isFolder) setContent(n, bytes)
         return n
     }
 

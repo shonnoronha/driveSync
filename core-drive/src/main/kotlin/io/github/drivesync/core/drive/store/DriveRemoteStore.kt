@@ -5,6 +5,7 @@ import io.github.drivesync.core.drive.api.DriveFile
 import io.github.drivesync.core.drive.api.DriveQuery
 import io.github.drivesync.core.sync.model.RelPath
 import io.github.drivesync.core.sync.model.RemoteEntry
+import io.github.drivesync.core.sync.model.RemoteVersion
 import io.github.drivesync.core.sync.model.Snapshot
 import io.github.drivesync.core.sync.store.AccessMode
 import io.github.drivesync.core.sync.store.RemoteStore
@@ -16,13 +17,15 @@ import java.io.OutputStream
  * [RemoteStore] for one pair, rooted at the pair's Drive folder id (PRD 3.8). Paths are rebuilt from parent ids on
  * every call instead of being cached, so the re-checks before writes (PRD 3.9 rule 4) see Drive as it is now.
  * Where Drive holds several folders with one name, the one with the lowest id is used to place new items.
+ * The queries are the same in both access modes: with full Drive access they simply also return files that other
+ * apps or the Drive website put in the pair folder.
  */
+@Suppress("TooManyFunctions") // One per RemoteStore operation, plus the path helpers they share.
 class DriveRemoteStore(
     private val client: DriveClient,
     private val pairFolderId: String,
+    override val accessMode: AccessMode = AccessMode.APP_FOLDER,
 ) : RemoteStore {
-    override val accessMode: AccessMode = AccessMode.APP_FOLDER
-
     override suspend fun scan(): Snapshot<RemoteEntry> {
         val pairFolder = client.getOrNull(pairFolderId)
         when {
@@ -101,6 +104,22 @@ class DriveRemoteStore(
     override suspend fun trash(fileId: String) {
         client.trash(fileId)
     }
+
+    override suspend fun versions(fileId: String): List<RemoteVersion> =
+        client.revisions(fileId).map {
+            RemoteVersion(
+                revisionId = it.id,
+                md5 = it.md5Checksum,
+                size = it.size?.toLongOrNull() ?: 0,
+                modifiedTime = DriveClient.epochMillis(it.modifiedTime),
+            )
+        }
+
+    override suspend fun downloadVersion(
+        fileId: String,
+        revisionId: String,
+        sink: OutputStream,
+    ) = client.downloadRevision(fileId, revisionId, sink)
 
     /** The path of [file] inside this pair, or null when it is not (or no longer) inside the pair folder. */
     private suspend fun pathOf(file: DriveFile): RelPath? {

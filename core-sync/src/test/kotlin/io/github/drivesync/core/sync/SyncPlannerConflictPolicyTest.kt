@@ -10,7 +10,7 @@ import io.github.drivesync.core.sync.plan.ConflictResolution
 import io.github.drivesync.core.sync.plan.MoveReason
 import io.github.drivesync.core.sync.plan.SyncAction.Download
 import io.github.drivesync.core.sync.plan.SyncAction.Link
-import io.github.drivesync.core.sync.plan.SyncAction.MoveRemote
+import io.github.drivesync.core.sync.plan.SyncAction.MoveLocal
 import io.github.drivesync.core.sync.plan.SyncAction.Upload
 import io.github.drivesync.core.sync.plan.SyncPlan
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -40,9 +40,9 @@ class SyncPlannerConflictPolicyTest {
     ) {
         assertActions(
             plan,
-            MoveRemote(copy, a, r, MoveReason.CONFLICT_COPY),
-            Upload(a, l, replaces = null),
-            Download(copy, r.copy(path = copy), replaces = null),
+            MoveLocal(copy, a, l, MoveReason.CONFLICT_COPY),
+            Upload(copy, l.copy(path = copy), replaces = null),
+            Download(a, r, replaces = null),
         )
         assertConflicts(plan, Conflict(a, kind, ConflictResolution.KEPT_BOTH, copy))
     }
@@ -210,9 +210,9 @@ class SyncPlannerConflictPolicyTest {
             val second = conflictCopy("a.txt", 2)
             assertActions(
                 plan,
-                MoveRemote(second, a, r, MoveReason.CONFLICT_COPY),
-                Upload(a, l, replaces = null),
-                Download(second, r.copy(path = second), replaces = null),
+                MoveLocal(second, a, l, MoveReason.CONFLICT_COPY),
+                Upload(second, l.copy(path = second), replaces = null),
+                Download(a, r, replaces = null),
             )
         }
 

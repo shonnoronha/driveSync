@@ -2,6 +2,7 @@ package io.github.drivesync.core.sync.store
 
 import io.github.drivesync.core.sync.model.RelPath
 import io.github.drivesync.core.sync.model.RemoteEntry
+import io.github.drivesync.core.sync.model.RemoteVersion
 import io.github.drivesync.core.sync.model.Snapshot
 import java.io.InputStream
 import java.io.OutputStream
@@ -52,4 +53,17 @@ interface RemoteStore {
 
     /** Moves to Drive trash. Never a permanent delete (PRD 3.9 rule 10). */
     suspend fun trash(fileId: String)
+
+    /**
+     * The versions Drive keeps of a file, oldest first, trashed files included (Rewind). Empty when the file is
+     * gone for good or has no downloadable versions (folders, Google Docs).
+     */
+    suspend fun versions(fileId: String): List<RemoteVersion>
+
+    /** Streams one version from [versions]. */
+    suspend fun downloadVersion(
+        fileId: String,
+        revisionId: String,
+        sink: OutputStream,
+    )
 }

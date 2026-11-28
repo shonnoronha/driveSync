@@ -59,4 +59,22 @@
     <string name="settings_save">Save</string>
     <string name="settings_notifications_body">Errors, conflicts and sync progress</string>
     <string name="settings_battery_body">Let syncs run in the background</string>
+    <string name="settings_storage">Google Drive storage</string>
+    <string name="settings_storage_used">%1$s of %2$s used</string>
+    <string name="settings_storage_unlimited">%1$s used</string>
+    <string name="settings_storage_nearly_full">%1$s. Almost full: new files stop uploading once it\'s full.</string>
+    <string name="settings_advanced">Advanced</string>
+    <string name="settings_full_drive">Full Drive access</string>
+    <string name="settings_full_drive_body">Also syncs files you add to these folders from the Drive website or other apps. Gives Drive Sync access to all of your Google Drive.</string>
+    <string name="settings_full_drive_unavailable">Needs Drive access added to your own Google Cloud project first. See "Full Drive access" in the README.</string>
+    <string name="settings_full_drive_not_granted">Full Drive access wasn't granted. Nothing changed.</string>
+    <string name="settings_full_drive_failed">Google refused the request. Check that the Drive scope is added to your Cloud project.</string>
+    <string name="settings_full_drive_renew">Ask Google again</string>
+    <string name="settings_full_drive_renew_body">If syncing stops with "Sign in to Google again"</string>
+    <string name="settings_full_drive_on_title">Turn on full Drive access?</string>
+    <string name="settings_full_drive_on_body">Google will ask you to allow access to all of your Drive and will warn that the app isn't verified. That's expected for your own Cloud project: choose Advanced, then continue. Drive Sync still only syncs the folders you add.</string>
+    <string name="settings_full_drive_continue">Continue</string>
+    <string name="settings_full_drive_off_title">Turn off full Drive access?</string>
+    <string name="settings_full_drive_off_body">Files added from the Drive website stop syncing. The copies on this phone stay. Every folder is checked once more without deleting anything, which may upload those files again as separate copies.</string>
+    <string name="settings_full_drive_off">Turn off</string>
 </resources>

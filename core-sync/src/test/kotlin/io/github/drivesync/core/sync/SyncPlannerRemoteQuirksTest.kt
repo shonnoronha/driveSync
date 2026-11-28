@@ -9,7 +9,9 @@ import io.github.drivesync.core.sync.plan.SkipReason
 import io.github.drivesync.core.sync.plan.Skipped
 import io.github.drivesync.core.sync.plan.SyncAction.CreateLocalFolder
 import io.github.drivesync.core.sync.plan.SyncAction.Download
+import io.github.drivesync.core.sync.plan.SyncAction.MoveLocal
 import io.github.drivesync.core.sync.plan.SyncAction.MoveRemote
+import io.github.drivesync.core.sync.plan.SyncAction.RecycleLocal
 import io.github.drivesync.core.sync.plan.SyncAction.TrashRemote
 import io.github.drivesync.core.sync.plan.SyncAction.Upload
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -87,15 +89,15 @@ class SyncPlannerRemoteQuirksTest {
         private val copy = conflictCopy("a.txt")
 
         @Test
-        fun `without a base the lowest id keeps the name and the other is renamed and downloaded`() {
+        fun `without a base the lowest id keeps the name`() {
             val plan = planReady(emptyList(), listOf(r2, r1), emptyList())
             assertActions(
                 plan,
-                MoveRemote(copy, a, r2, MoveReason.DUPLICATE_RENAME),
-                Download(copy, r2.copy(path = copy), replaces = null),
+                Download(copy, r2, replaces = null),
                 Download(a, r1, replaces = null),
             )
             assertConflicts(plan, Conflict(a, ConflictKind.DUPLICATE_REMOTE_NAME, ConflictResolution.KEPT_BOTH, copy))
+            assertTrue(plan.actions.none { it is MoveRemote }, "Drive is never renamed")
         }
 
         @Test
@@ -103,11 +105,7 @@ class SyncPlannerRemoteQuirksTest {
             val l = local("a.txt", "two")
             val b = base("a.txt", "two", remoteFileId = "r2")
             val plan = planReady(listOf(l), listOf(r1, r2), listOf(b))
-            assertActions(
-                plan,
-                MoveRemote(copy, a, r1, MoveReason.DUPLICATE_RENAME),
-                Download(copy, r1.copy(path = copy), replaces = null),
-            )
+            assertActions(plan, Download(copy, r1, replaces = null))
         }
 
         @Test
@@ -115,8 +113,8 @@ class SyncPlannerRemoteQuirksTest {
             val l = local("a.txt", "zero")
             val b = base("a.txt", "zero", remoteFileId = "gone")
             val plan = planReady(listOf(l), listOf(r2, r1), listOf(b))
-            val rename = plan.actions.filterIsInstance<MoveRemote>().single()
-            assertEquals(r2, rename.remote)
+            val extra = plan.actions.filterIsInstance<Download>().single { it.path == copy }
+            assertEquals(r2, extra.remote)
         }
 
         @Test
@@ -127,21 +125,19 @@ class SyncPlannerRemoteQuirksTest {
             assertEquals(listOf(copy, copy2), plan.conflicts.map { it.conflictCopy })
             assertEquals(
                 setOf(
-                    MoveRemote(copy, a, r2, MoveReason.DUPLICATE_RENAME),
-                    MoveRemote(copy2, a, r3, MoveReason.DUPLICATE_RENAME),
-                    Download(copy, r2.copy(path = copy), replaces = null),
-                    Download(copy2, r3.copy(path = copy2), replaces = null),
+                    Download(copy, r2, replaces = null),
+                    Download(copy2, r3, replaces = null),
                     Download(a, r1, replaces = null),
                 ),
                 plan.actions.toSet(),
             )
-            assertEquals(5, plan.actions.size)
+            assertEquals(3, plan.actions.size)
         }
 
         @Test
-        fun `download-only pairs rename duplicates too`() {
+        fun `download-only pairs keep duplicates apart too`() {
             val plan = planReady(emptyList(), listOf(r1, r2), emptyList(), settings(SyncDirection.DOWNLOAD_ONLY))
-            assertEquals(1, plan.actions.count { it is MoveRemote })
+            assertEquals(0, plan.actions.count { it is MoveRemote })
             assertEquals(ConflictKind.DUPLICATE_REMOTE_NAME, plan.conflicts.single().kind)
         }
 
@@ -155,7 +151,7 @@ class SyncPlannerRemoteQuirksTest {
         }
 
         @Test
-        fun `a renamed duplicate does not count as the primary file leaving`() {
+        fun `a duplicate copy stays in its folder`() {
             val f = path("f")
             val l = local("f/a.txt", "one")
             val p1 = remote("f/a.txt", "one", fileId = "r1")
@@ -167,12 +163,13 @@ class SyncPlannerRemoteQuirksTest {
                     listOf(baseFolder("f"), base("f/a.txt", "one", remoteFileId = "r1")),
                 )
             assertTrue(plan.actions.none { it is TrashRemote }, plan.summary().toString())
-            val rename = plan.actions.filterIsInstance<MoveRemote>().single()
-            assertEquals(f, rename.path.parent)
+            val download = plan.actions.filterIsInstance<Download>().single()
+            assertEquals(f, download.path.parent)
+            assertEquals(p2, download.remote)
         }
 
         @Test
-        fun `a folder and a file with one name on Drive - the file is renamed`() {
+        fun `a folder and a file with one name - the file is a copy`() {
             val folder = remoteFolder("x", fileId = "f1")
             val file = remote("x", "bytes", fileId = "f0")
             val xCopy = conflictCopy("x")
@@ -180,8 +177,7 @@ class SyncPlannerRemoteQuirksTest {
             assertActions(
                 plan,
                 CreateLocalFolder(path("x")),
-                MoveRemote(xCopy, path("x"), file, MoveReason.DUPLICATE_RENAME),
-                Download(xCopy, file.copy(path = xCopy), replaces = null),
+                Download(xCopy, file, replaces = null),
             )
         }
 
@@ -249,6 +245,53 @@ class SyncPlannerRemoteQuirksTest {
             val plan = planReady(listOf(local("x", "bytes"), sibling), listOf(remoteFolder("x")), null)
             assertActions(plan, Upload(sibling.path, sibling, replaces = null))
             assertEquals(ConflictKind.TYPE_MISMATCH, plan.conflicts.single().kind)
+        }
+    }
+
+    /** A phone copy of a Drive name clash: matched by Drive id, renamed back once the name is free (FR-S13). */
+    @Nested
+    inner class ClashCopies {
+        private val copy = conflictCopy("a.txt")
+        private val r1 = remote("a.txt", "one", fileId = "r1")
+        private val r2 = remote("a.txt", "two", fileId = "r2")
+        private val primary = local("a.txt", "one")
+        private val copyLocal = local(copy.value, "two")
+        private val bases =
+            listOf(
+                base("a.txt", "one", remoteFileId = "r1"),
+                base(copy.value, "two", remoteFileId = "r2").copy(remotePath = a),
+            )
+
+        @Test
+        fun `a clash copy is matched by its Drive id`() {
+            val plan = planReady(listOf(primary, copyLocal), listOf(r1, r2), bases)
+            assertNothingToDo(plan)
+            assertEquals(emptyList<Conflict>(), plan.conflicts)
+        }
+
+        @Test
+        fun `a phone edit of the copy updates its Drive file`() {
+            val edited = local(copy.value, "two v2", lastModified = EDITED_MTIME)
+            val plan = planReady(listOf(primary, edited), listOf(r1, r2), bases)
+            assertActions(plan, Upload(copy, edited, replaces = r2))
+        }
+
+        @Test
+        fun `a free Drive name is given back`() {
+            val plan = planReady(listOf(copyLocal), listOf(r2), bases.drop(1))
+            assertActions(plan, MoveLocal(a, copy, copyLocal, MoveReason.CLASH_RESOLVED, remote = r2))
+        }
+
+        @Test
+        fun `the name waits while the phone still has it`() {
+            val plan = planReady(listOf(primary, copyLocal), listOf(r2), bases)
+            assertActions(plan, RecycleLocal(a, primary))
+        }
+
+        @Test
+        fun `a Drive delete of the twin recycles the copy`() {
+            val plan = planReady(listOf(primary, copyLocal), listOf(r1), bases)
+            assertActions(plan, RecycleLocal(copy, copyLocal))
         }
     }
 }

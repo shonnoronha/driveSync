@@ -50,7 +50,7 @@ class HomeViewModel
                 )
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), HomeUiState())
 
-        fun syncAll() = scheduler.syncNow()
+        fun syncAll() = scheduler.syncNow(manual = true)
 
         fun syncPair(pairId: String) = scheduler.syncNow(pairId)
 

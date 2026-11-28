@@ -11,17 +11,27 @@ plugins {
  * OAuth "Web application" client id used by Credential Manager: git-ignored local.properties locally, the
  * DRIVESYNC_GOOGLE_SERVER_CLIENT_ID environment variable on CI.
  */
+val localProperties =
+    Properties().apply {
+        rootProject
+            .file("local.properties")
+            .takeIf { it.exists() }
+            ?.reader()
+            ?.use(::load)
+    }
+
 val googleServerClientId: String =
-    Properties()
-        .apply {
-            rootProject
-                .file("local.properties")
-                .takeIf { it.exists() }
-                ?.reader()
-                ?.use(::load)
-        }.getProperty("drivesync.googleServerClientId")
+    localProperties.getProperty("drivesync.googleServerClientId")
         ?: System.getenv("DRIVESYNC_GOOGLE_SERVER_CLIENT_ID")
         ?: ""
+
+/**
+ * Set to true once the OAuth client's Cloud project has the restricted `drive` scope on its consent screen
+ * (README, "Full Drive access"). Without it the Settings switch is shown but disabled.
+ */
+val fullDriveScope: Boolean =
+    (localProperties.getProperty("drivesync.fullDriveScope") ?: System.getenv("DRIVESYNC_FULL_DRIVE_SCOPE"))
+        .toBoolean()
 
 android {
     buildFeatures {
@@ -29,6 +39,7 @@ android {
     }
     defaultConfig {
         buildConfigField("String", "GOOGLE_SERVER_CLIENT_ID", "\"$googleServerClientId\"")
+        buildConfigField("boolean", "FULL_DRIVE_SCOPE_CONFIGURED", fullDriveScope.toString())
     }
 }
 

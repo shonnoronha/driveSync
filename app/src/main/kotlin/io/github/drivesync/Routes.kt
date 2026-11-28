@@ -10,6 +10,7 @@ object Routes {
     const val ADD = "add"
     const val PAIR = "pair/{${PairDetailViewModel.PAIR_ID}}"
     const val FILES = "pair/{${PairDetailViewModel.PAIR_ID}}/files"
+    const val REWIND = "pair/{${PairDetailViewModel.PAIR_ID}}/rewind"
     const val CONFLICTS = "conflicts"
     const val ACTIVITY = "activity"
     const val SETTINGS = "settings"
@@ -17,6 +18,8 @@ object Routes {
     fun pair(id: String) = "pair/$id"
 
     fun files(pairId: String) = "pair/$pairId/files"
+
+    fun rewind(pairId: String) = "pair/$pairId/rewind"
 }
 
 /** The bottom navigation tabs. */

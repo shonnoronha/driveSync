@@ -14,6 +14,7 @@ import io.github.drivesync.core.data.settings.SettingsRepository
 import io.github.drivesync.core.sync.engine.SyncProgress
 import io.github.drivesync.core.work.MediaFolders
 import io.github.drivesync.core.work.PairProgressListener
+import io.github.drivesync.core.work.RewindResult
 import io.github.drivesync.core.work.SyncCoordinator
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -51,6 +52,11 @@ class SyncWorker
                         }
                     }
                 val onProgress = PairProgressListener { pair, progress -> latest.value = pair to progress }
+                if (inputData.getString(KEY_MODE) == MODE_REWIND) {
+                    val result = rewind(onProgress)
+                    publisher.cancel()
+                    return@coroutineScope result
+                }
                 val retry =
                     when (inputData.getString(KEY_MODE)) {
                         MODE_PAIR -> {
@@ -69,12 +75,27 @@ class SyncWorker
                         }
 
                         else -> {
-                            coordinator.syncAll(onProgress = onProgress)
+                            coordinator.syncAll(
+                                onProgress = onProgress,
+                                manual = inputData.getBoolean(KEY_MANUAL, false),
+                            )
                         }
                     }
                 publisher.cancel()
                 if (retry && runAttemptCount < MAX_RETRIES) Result.retry() else Result.success()
             }
+
+        private suspend fun rewind(onProgress: PairProgressListener): Result {
+            val pairId = inputData.getString(KEY_PAIR_ID)
+            val point = inputData.getLong(KEY_REWIND_POINT, -1)
+            if (pairId == null || point < 0) return Result.failure()
+            val result = coordinator.rewind(pairId, point, onProgress)
+            return if (result is RewindResult.Retry && runAttemptCount < MAX_RETRIES) {
+                Result.retry()
+            } else {
+                Result.success(RewindWork.output(result))
+            }
+        }
 
         override suspend fun getForegroundInfo(): ForegroundInfo = foregroundInfo(null, null)
 
@@ -114,9 +135,16 @@ class SyncWorker
             const val KEY_MODE = "mode"
             const val KEY_PAIR_ID = "pairId"
             const val KEY_CONFIRM_DELETES = "confirmDeletes"
+
+            /** All-pairs runs: the user asked, so folders' own Wi-Fi and charging rules do not hold it back. */
+            const val KEY_MANUAL = "manual"
             const val MODE_ALL = "all"
             const val MODE_PAIR = "pair"
             const val MODE_MEDIA = "media"
+
+            /** Rewind one pair ([KEY_PAIR_ID]) to the history point [KEY_REWIND_POINT]. */
+            const val MODE_REWIND = "rewind"
+            const val KEY_REWIND_POINT = "rewindPoint"
             private const val MAX_RETRIES = 5
             private const val PROGRESS_INTERVAL_MS = 300L
         }

@@ -17,7 +17,7 @@
     <string name="kind_remote_modified_local_deleted">Changed on Drive, deleted on the phone</string>
     <string name="kind_destination_modified">Changed on the side this pair copies to</string>
     <string name="kind_type_mismatch">A file on one side and a folder on the other. Rename one of them to continue.</string>
-    <string name="kind_duplicate">Several Drive files with the same name</string>
+    <string name="kind_duplicate">Drive has several files with this name. Drive is left as it is; the extra file is on the phone under another name, and gets the Drive name back once you rename or remove the other one on Drive.</string>
     <string name="resolution_kept_both">Both kept; the other version is now %1$s</string>
     <string name="resolution_kept_both_plain">Both versions kept</string>
     <string name="resolution_local_won">The phone version was kept</string>

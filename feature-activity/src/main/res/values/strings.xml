@@ -10,6 +10,13 @@
     <string name="activity_filter_conflicts">Conflicts</string>
     <string name="activity_filter_problems">Problems</string>
     <string name="activity_today">Today</string>
+    <string name="activity_share">Share log</string>
+    <string name="activity_share_title">Share the activity log</string>
+    <string name="activity_share_body">Sends the entries this screen shows, newest first, as plain text, for example to attach to a bug report. Nothing is sent until you pick an app.</string>
+    <string name="activity_share_hide">Hide file and folder names</string>
+    <string name="activity_share_hide_body">Names become placeholders like name3.jpg. Email addresses are removed.</string>
+    <string name="activity_share_cancel">Cancel</string>
+    <string name="activity_share_subject">Drive Sync activity log</string>
     <string name="kind_uploaded">Uploaded to Drive</string>
     <string name="kind_downloaded">Downloaded to phone</string>
     <string name="kind_moved">Moved</string>
@@ -20,4 +27,5 @@
     <string name="kind_failed">Failed</string>
     <string name="kind_paused">Paused</string>
     <string name="kind_confirm">Waiting for you to confirm deletes</string>
+    <string name="kind_restored">Restored an older version</string>
 </resources>

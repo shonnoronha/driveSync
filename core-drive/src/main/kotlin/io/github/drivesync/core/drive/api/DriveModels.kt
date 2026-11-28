@@ -24,6 +24,34 @@ data class DriveFile(
     }
 }
 
+/** `about.get` with `fields=storageQuota` (FR-M5). Drive sends int64 values as strings; no limit means unlimited. */
+@Serializable
+data class DriveAbout(
+    val storageQuota: StorageQuota = StorageQuota(),
+) {
+    @Serializable
+    data class StorageQuota(
+        val limit: String? = null,
+        val usage: String? = null,
+    )
+}
+
+/** One version Drive keeps of a file (Rewind). */
+@Serializable
+data class DriveRevision(
+    val id: String,
+    val modifiedTime: String? = null,
+    val md5Checksum: String? = null,
+    val size: String? = null,
+    val keepForever: Boolean = false,
+)
+
+@Serializable
+data class DriveRevisionList(
+    val revisions: List<DriveRevision> = emptyList(),
+    val nextPageToken: String? = null,
+)
+
 @Serializable
 data class DriveFileList(
     val files: List<DriveFile> = emptyList(),

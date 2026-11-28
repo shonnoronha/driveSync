@@ -4,9 +4,11 @@ import io.github.drivesync.core.data.db.PairStatus
 import io.github.drivesync.core.data.pairs.PairRepository
 import io.github.drivesync.core.sync.model.BaseEntry
 import io.github.drivesync.core.sync.model.ConflictPolicy
+import io.github.drivesync.core.sync.model.FileFilters
 import io.github.drivesync.core.sync.model.MassDeleteGuard
 import io.github.drivesync.core.sync.model.PairSettings
 import io.github.drivesync.core.sync.model.RelPath
+import io.github.drivesync.core.sync.model.RunConditions
 import io.github.drivesync.core.sync.model.SyncDirection
 import io.github.drivesync.core.sync.store.BaseUpdate
 import kotlinx.coroutines.flow.first
@@ -67,6 +69,32 @@ class PairRepositoryTest : DbTest() {
             assertEquals(custom, updated.settings)
             assertFalse(updated.enabled)
             repo.updateSettings("missing", custom) // No-op.
+        }
+
+    @Test
+    fun `stores file rules`() =
+        runTest {
+            val pair = addPair()
+            val rules = FileFilters(listOf("*.tmp", " node_modules ", ""), maxFileSize = 1_000_000, skipHidden = true)
+            repo.updateSettings(pair.id, pair.settings.copy(filters = rules))
+            val stored = repo.pair(pair.id)!!.settings.filters
+            assertEquals(FileFilters(listOf("*.tmp", "node_modules"), 1_000_000, true), stored)
+
+            repo.updateSettings(pair.id, pair.settings)
+            assertEquals(FileFilters(), repo.pair(pair.id)!!.settings.filters)
+        }
+
+    @Test
+    fun `stores folder options`() =
+        runTest {
+            val pair = addPair()
+            val options =
+                pair.settings.copy(
+                    filters = FileFilters(includeSubfolders = false),
+                    conditions = RunConditions(wifiOnly = true, chargingOnly = true),
+                )
+            repo.updateSettings(pair.id, options)
+            assertEquals(options, repo.pair(pair.id)!!.settings)
         }
 
     @Test

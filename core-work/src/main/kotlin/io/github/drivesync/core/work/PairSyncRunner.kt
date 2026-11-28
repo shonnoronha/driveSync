@@ -2,14 +2,18 @@ package io.github.drivesync.core.work
 
 import io.github.drivesync.core.data.activity.ActivityRepository
 import io.github.drivesync.core.data.activity.SyncRecorder
+import io.github.drivesync.core.data.history.HistoryRepository
 import io.github.drivesync.core.data.pairs.PairRepository
 import io.github.drivesync.core.drive.api.DriveException
 import io.github.drivesync.core.drive.auth.AuthRequiredException
 import io.github.drivesync.core.sync.engine.ActionOutcome
+import io.github.drivesync.core.sync.engine.RewindOutcome
 import io.github.drivesync.core.sync.engine.SyncEngine
 import io.github.drivesync.core.sync.engine.SyncOutcome
+import io.github.drivesync.core.sync.engine.SyncProgress
 import io.github.drivesync.core.sync.engine.SyncProgressListener
 import io.github.drivesync.core.sync.plan.ConflictStamp
+import io.github.drivesync.core.sync.plan.RewindRefusal
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.IOException
@@ -40,6 +44,29 @@ sealed interface RunResult {
     ) : RunResult
 }
 
+/** What a rewind did (Rewind). */
+sealed interface RewindResult {
+    data class Done(
+        /** Files and folders put back, brought back or sent to the trash. */
+        val changed: Int,
+        /** Left alone on purpose: changed since the last sync, version gone, name taken. */
+        val skipped: Int,
+        val failed: Int,
+    ) : RewindResult
+
+    data class Refused(
+        val reason: RewindRefusal,
+    ) : RewindResult
+
+    data class NeedsUser(
+        val detail: String,
+    ) : RewindResult
+
+    data class Retry(
+        val detail: String,
+    ) : RewindResult
+}
+
 /**
  * Runs one pair end to end: stores → engine → recorder. At most one run per pair at a time (PRD 7), even when the
  * periodic worker and a "sync now" overlap.
@@ -53,6 +80,7 @@ class PairSyncRunner
         private val activity: ActivityRepository,
         private val stores: SyncStores,
         private val environment: SyncEnvironment,
+        private val history: HistoryRepository,
     ) {
         private val locks = ConcurrentHashMap<String, Mutex>()
 
@@ -81,13 +109,58 @@ class PairSyncRunner
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: AuthRequiredException) {
-                    needsUser(pair.id, "Sign in to Google again to keep syncing (${e.message})")
+                    needsUser(pair.id, "${GoogleAccess.SIGN_IN_AGAIN} to keep syncing (${e.message})")
                 } catch (e: DriveException.QuotaExceeded) {
                     needsUser(pair.id, "Google Drive is full: ${e.message}")
                 } catch (e: IOException) {
                     val detail = e.message ?: e.javaClass.simpleName
                     recorder.recordFailure(pair.id, detail, needsUser = false)
                     RunResult.Retry(detail)
+                }
+            }
+
+        /**
+         * Rewind (one pair): back to how the folder was right after the run at [point] of its history. Same lock as
+         * syncs, so a rewind never overlaps a sync of the same pair. Its changes are a new point, so it can be undone.
+         */
+        suspend fun rewind(
+            pairId: String,
+            point: Long,
+            progress: SyncProgressListener = SyncProgressListener.NONE,
+        ): RewindResult =
+            locks.getOrPut(pairId) { Mutex() }.withLock {
+                val pair = pairs.pair(pairId) ?: return@withLock RewindResult.Refused(RewindRefusal.NO_HISTORY)
+                val timeline = history.timeline(pairId)
+                if (point !in timeline.points) return@withLock RewindResult.Refused(RewindRefusal.POINT_GONE)
+                try {
+                    val engine = SyncEngine(stores.local(pair), stores.remote(pair), pairs.baseStore(pair.id))
+                    when (val outcome = engine.rewind(timeline.stateAsOf(point), pair.settings, progress)) {
+                        is RewindOutcome.Refused -> {
+                            RewindResult.Refused(outcome.reason)
+                        }
+
+                        is RewindOutcome.Completed -> {
+                            recorder.record(pair.id, SyncOutcome.Completed(outcome.plan.asSyncPlan(), outcome.report))
+                            val results = outcome.report.results
+                            RewindResult.Done(
+                                changed =
+                                    results.count {
+                                        it.outcome == ActionOutcome.Done &&
+                                            SyncProgress.counts(it.action)
+                                    },
+                                skipped = outcome.plan.skipped.size,
+                                failed = results.count { it.outcome is ActionOutcome.Failed },
+                            )
+                        }
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: AuthRequiredException) {
+                    RewindResult.NeedsUser("${GoogleAccess.SIGN_IN_AGAIN} (${e.message})")
+                } catch (e: DriveException.QuotaExceeded) {
+                    RewindResult.NeedsUser("Google Drive is full: ${e.message}")
+                } catch (e: IOException) {
+                    RewindResult.Retry(e.message ?: e.javaClass.simpleName)
                 }
             }
 
@@ -119,3 +192,10 @@ class PairSyncRunner
                 }
             }
     }
+
+/** A pair paused because Google access lapsed or was revoked (FR-A4); the UI offers to grant it again. */
+object GoogleAccess {
+    const val SIGN_IN_AGAIN = "Sign in to Google again"
+
+    fun isNeeded(statusDetail: String?): Boolean = statusDetail?.startsWith(SIGN_IN_AGAIN) == true
+}

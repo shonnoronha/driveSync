@@ -2,6 +2,7 @@ package io.github.drivesync.feature.settings.settings
 
 import io.github.drivesync.core.data.settings.AppSettings
 import io.github.drivesync.core.data.settings.ThemeMode
+import io.github.drivesync.core.drive.api.DriveStorage
 
 data class SettingsUiState(
     val loading: Boolean = true,
@@ -9,6 +10,11 @@ data class SettingsUiState(
     val defaultDeviceName: String = "",
     val version: String = "",
     val signedOut: Boolean = false,
+    /** The build's OAuth client has the `drive` scope; otherwise the full Drive switch is shown disabled. */
+    val fullDriveAvailable: Boolean = false,
+    val fullDriveMessage: FullDriveMessage? = null,
+    /** The account's Drive storage (FR-M5); null until loaded, or when offline. */
+    val storage: DriveStorage? = null,
 )
 
 /** Callbacks of the settings screen. */
@@ -20,6 +26,8 @@ data class SettingsActions(
     val onTheme: (ThemeMode, Boolean) -> Unit = { _, _ -> },
     val onAccent: (seedColor: Int, amoled: Boolean) -> Unit = { _, _ -> },
     val onLogRetention: (Int) -> Unit = {},
+    /** True asks Google for full Drive access (or renews it); false turns it off. */
+    val onFullDrive: (Boolean) -> Unit = {},
     val onOpenNotifications: () -> Unit = {},
     val onOpenBattery: () -> Unit = {},
     val onOpenSource: () -> Unit = {},

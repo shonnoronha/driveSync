@@ -16,6 +16,7 @@ import io.github.drivesync.core.sync.plan.SyncAction.Link
 import io.github.drivesync.core.sync.plan.SyncAction.MoveLocal
 import io.github.drivesync.core.sync.plan.SyncAction.MoveRemote
 import io.github.drivesync.core.sync.plan.SyncAction.RecycleLocal
+import io.github.drivesync.core.sync.plan.SyncAction.Restore
 import io.github.drivesync.core.sync.plan.SyncAction.TrashRemote
 import io.github.drivesync.core.sync.plan.SyncAction.Upload
 
@@ -153,6 +154,12 @@ internal class PlanBuilder(
     /** Drive has both a file and a folder with this name: a type mismatch, never planned. */
     private val remoteMixedKinds = HashSet<RelPath>()
 
+    /**
+     * Drive name clashes kept apart on the phone (FR-S13): phone path → the Drive file it stands for. These are
+     * matched by file id, because their Drive name is shared with another file.
+     */
+    private val clashCopies = HashMap<RelPath, RemoteEntry>()
+
     private val actions = mutableListOf<SyncAction>()
     private val conflicts = mutableListOf<Conflict>()
     private val skipped = preSkipped.toMutableList()
@@ -163,7 +170,17 @@ internal class PlanBuilder(
     private val namer: ConflictNamer
 
     init {
-        val groups = remote.groupBy { it.path }
+        val clashIds =
+            baseByPath.values
+                .filter { !it.isFolder && it.remotePath != null }
+                .mapNotNull { b -> b.remoteFileId?.let { it to b.path } }
+                .toMap()
+        val groups = LinkedHashMap<RelPath, MutableList<RemoteEntry>>()
+        for (r in remote) {
+            val copyPath = if (r.isFolder) null else clashIds[r.fileId]
+            if (copyPath != null) clashCopies[copyPath] = r
+            groups.getOrPut(copyPath ?: r.path) { mutableListOf() } += r
+        }
         for ((path, group) in groups) {
             val primary = choosePrimary(group, baseByPath[path])
             remoteByPath[path] = primary
@@ -181,11 +198,13 @@ internal class PlanBuilder(
         localUntracked.forEach(localAfter::pin)
         remoteUntracked.forEach(remoteAfter::pin)
         remoteMixedKinds.forEach(remoteAfter::pin)
-        namer = ConflictNamer(input.conflictStamp, localByPath.keys + groups.keys + baseByPath.keys + remoteUntracked)
+        val used = localByPath.keys + groups.keys + remote.map { it.path } + baseByPath.keys + remoteUntracked
+        namer = ConflictNamer(input.conflictStamp, used)
     }
 
     fun build(): SyncPlan {
         planDuplicates()
+        planClashRenames()
         if (downloadsAllowed) detectRemoteMoves()
         if (uploadsAllowed) detectLocalMoves()
 
@@ -224,19 +243,50 @@ internal class PlanBuilder(
             ?: group.firstOrNull { base?.remoteFileId != null && it.fileId == base.remoteFileId && !it.isFolder }
             ?: group.sortedWith(compareBy({ it.isFolder != (base?.isFolder ?: true) }, { it.fileId })).first()
 
+    /**
+     * Drive is left alone: each extra same-name file comes to the phone under a conflict name. Its base row then
+     * remembers the Drive name ([BaseEntry.remotePath]), so later runs match it by id.
+     */
     private fun planDuplicates() {
         for ((path, extras) in remoteDuplicates.toSortedMap()) {
             for (extra in extras) {
                 if (downloadsAllowed) {
                     val copy = namer.conflictPath(path)
-                    add(MoveRemote(copy, path, extra, MoveReason.DUPLICATE_RENAME))
-                    add(Download(copy, extra.copy(path = copy), replaces = null))
+                    add(Download(copy, extra, replaces = null))
                     conflicts += Conflict(path, ConflictKind.DUPLICATE_REMOTE_NAME, ConflictResolution.KEPT_BOTH, copy)
                 } else {
                     // Left alone on Drive: it must keep its folder alive.
                     skipped += Skipped(path, SkipReason.DUPLICATE_REMOTE_NAME)
                     remoteAfter.pin(path)
                 }
+            }
+        }
+    }
+
+    /**
+     * The clash is gone (the other Drive file was deleted, renamed or moved): the phone copy gets its Drive name back.
+     * Only for untouched files whose Drive name is free on both sides; otherwise it waits for a later run. With
+     * several copies of one Drive name, the lowest id goes first.
+     */
+    private fun planClashRenames() {
+        val copiesByDrivePath = clashCopies.entries.groupBy({ it.value.path }, { it.key })
+        for ((copyPath, r) in clashCopies.toSortedMap()) {
+            val target = r.path
+            val first = copiesByDrivePath.getValue(target).minBy { clashCopies.getValue(it).fileId }
+            val b = baseByPath[copyPath]
+            val l = localByPath[copyPath]
+            val nameFree =
+                target !in remoteByPath && target !in localByPath && target !in baseByPath && target !in handled
+            val untouched =
+                b != null && l != null && !l.isFolder &&
+                    localChange(l, b) == Change.UNCHANGED && remoteChange(r, b) == Change.UNCHANGED
+            val turn = first == copyPath && remoteByPath[copyPath] === r && copyPath !in handled
+            if (turn && nameFree && untouched) {
+                add(MoveLocal(target, copyPath, checkNotNull(l), MoveReason.CLASH_RESOLVED, remote = r))
+                remoteAfter.remove(copyPath)
+                remoteAfter.add(target)
+                handled += copyPath
+                handled += target
             }
         }
     }
@@ -503,15 +553,19 @@ internal class PlanBuilder(
         conflicts += Conflict(c.path, kind, ConflictResolution.REMOTE_WON)
     }
 
-    /** The Drive version becomes the conflict copy; the local file keeps its name (other apps may hold it open). */
+    /**
+     * Drive is never touched: its file keeps its id, name and content (it may be shared or linked elsewhere). The
+     * phone version is renamed to the conflict-copy name and uploaded under that name, then the Drive version comes
+     * down to the original name. Trade-off: an app holding the phone file open loses track of it.
+     */
     private fun keepBothTwoWay(
         c: FileCase,
         kind: ConflictKind,
     ) {
         val copy = namer.conflictPath(c.path)
-        add(MoveRemote(copy, c.path, c.r, MoveReason.CONFLICT_COPY))
-        add(Upload(c.path, c.l, replaces = null))
-        add(Download(copy, c.r.copy(path = copy), replaces = null))
+        add(MoveLocal(copy, c.path, c.l, MoveReason.CONFLICT_COPY))
+        add(Upload(copy, c.l.copy(path = copy), replaces = null))
+        add(Download(c.path, c.r, replaces = null))
         conflicts += Conflict(c.path, kind, ConflictResolution.KEPT_BOTH, copy)
     }
 
@@ -609,6 +663,12 @@ internal class PlanBuilder(
                 localAfter.add(action.path)
             }
 
+            is Restore -> {
+                // Only Rewind plans restores; listed so the bookkeeping stays complete.
+                localAfter.add(action.path)
+                remoteAfter.add(action.path)
+            }
+
             is TrashRemote -> {
                 remoteAfter.remove(action.path)
             }
@@ -623,8 +683,7 @@ internal class PlanBuilder(
             }
 
             is MoveRemote -> {
-                // A renamed duplicate leaves the primary file at `from`.
-                if (action.reason != MoveReason.DUPLICATE_RENAME) remoteAfter.remove(action.from)
+                remoteAfter.remove(action.from)
                 remoteAfter.add(action.path)
             }
 
@@ -642,7 +701,7 @@ internal class PlanBuilder(
                 is CreateLocalFolder, is CreateRemoteFolder -> Phase.CREATE_FOLDERS
                 is MoveLocal, is MoveRemote -> Phase.MOVES
                 is Upload -> Phase.UPLOADS
-                is Download -> Phase.DOWNLOADS
+                is Download, is Restore -> Phase.DOWNLOADS
                 is Link, is ForgetBase -> Phase.BOOKKEEPING
                 is TrashRemote, is RecycleLocal -> Phase.DELETES
             }

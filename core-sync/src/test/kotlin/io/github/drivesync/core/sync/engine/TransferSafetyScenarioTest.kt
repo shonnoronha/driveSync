@@ -46,8 +46,8 @@ class TransferSafetyScenarioTest {
                 val conflict = second.plan.conflicts.single()
                 assertEquals(ConflictKind.BOTH_MODIFIED, conflict.kind)
                 assertEquals(ConflictResolution.KEPT_BOTH, conflict.resolution)
-                assertEquals("local edit", p.local.content("a.txt"))
-                assertEquals("drive edit", p.local.content(copyOf("a.txt")))
+                assertEquals("drive edit", p.local.content("a.txt"))
+                assertEquals("local edit", p.local.content(copyOf("a.txt")))
                 p.assertMirrored()
                 p.assertConverged()
             }
@@ -67,8 +67,8 @@ class TransferSafetyScenarioTest {
 
                 p.restart()
                 p.runClean()
-                assertEquals("local edit", p.local.content("a.txt"))
-                assertEquals("drive edit", p.local.content(copyOf("a.txt")))
+                assertEquals("drive edit", p.local.content("a.txt"))
+                assertEquals("local edit", p.local.content(copyOf("a.txt")))
                 p.assertMirrored()
                 p.assertConverged()
             }
@@ -218,8 +218,8 @@ class TransferSafetyScenarioTest {
 
                 p.restart()
                 p.runClean()
-                assertEquals("local", p.local.content("new.txt"))
-                assertEquals("drive", p.local.content(copyOf("new.txt")))
+                assertEquals("drive", p.local.content("new.txt"))
+                assertEquals("local", p.local.content(copyOf("new.txt")))
                 p.assertMirrored()
                 p.assertConverged()
             }

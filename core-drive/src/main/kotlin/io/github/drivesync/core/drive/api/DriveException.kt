@@ -19,6 +19,14 @@ sealed class DriveException(
         message: String,
     ) : DriveException(message)
 
+    /**
+     * Drive refused this one file: it belongs to someone else, or its owner disabled downloads. Only that file
+     * fails; the rest of the folder keeps syncing.
+     */
+    class NoPermission(
+        message: String,
+    ) : DriveException(message)
+
     /** Still rate limited after every retry. */
     class RateLimited(
         message: String,

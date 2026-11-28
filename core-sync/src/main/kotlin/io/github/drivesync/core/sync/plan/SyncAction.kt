@@ -3,6 +3,7 @@ package io.github.drivesync.core.sync.plan
 import io.github.drivesync.core.sync.model.LocalEntry
 import io.github.drivesync.core.sync.model.RelPath
 import io.github.drivesync.core.sync.model.RemoteEntry
+import io.github.drivesync.core.sync.model.RemoteVersion
 
 /**
  * One step for the executor. Entries carried by an action are the state the planner saw; the executor must
@@ -76,6 +77,19 @@ sealed interface SyncAction {
         override val path: RelPath,
         val local: LocalEntry,
     ) : SyncAction
+
+    /**
+     * Rewind: puts an older Drive version of [sourceFileId] back at [path] on both sides. It becomes the newest
+     * version on Drive (so the content it replaces stays in Drive's history) and then the phone file. [replacesRemote]
+     * and [replacesLocal] are the current files there (expected state), or null when there are none.
+     */
+    data class Restore(
+        override val path: RelPath,
+        val sourceFileId: String,
+        val version: RemoteVersion,
+        val replacesRemote: RemoteEntry?,
+        val replacesLocal: LocalEntry?,
+    ) : SyncAction
 }
 
 enum class MoveReason {
@@ -85,8 +99,8 @@ enum class MoveReason {
     /** Keep-both conflict: the losing version is renamed to its conflict-copy name. */
     CONFLICT_COPY,
 
-    /** A same-name Drive duplicate is renamed so every file has a unique path (FR-S13). */
-    DUPLICATE_RENAME,
+    /** A Drive name clash is gone: the phone copy kept under a conflict name gets its Drive name back (FR-S13). */
+    CLASH_RESOLVED,
 }
 
 internal val SyncAction.isFileDelete: Boolean

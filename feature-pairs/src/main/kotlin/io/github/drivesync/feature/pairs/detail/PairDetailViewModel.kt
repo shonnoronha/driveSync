@@ -1,19 +1,25 @@
 package io.github.drivesync.feature.pairs.detail
 
+import android.content.Intent
+import android.content.IntentSender
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.drivesync.core.data.activity.ActivityRepository
+import io.github.drivesync.core.data.db.PairStatus
 import io.github.drivesync.core.data.pairs.PairRepository
 import io.github.drivesync.core.data.pairs.SyncPair
 import io.github.drivesync.core.data.settings.SettingsRepository
+import io.github.drivesync.core.drive.auth.google.AuthorizationStep
+import io.github.drivesync.core.drive.auth.google.GoogleAccount
+import io.github.drivesync.core.drive.auth.google.GoogleAuth
 import io.github.drivesync.core.drive.folders.DriveSyncFolders
 import io.github.drivesync.core.localstorage.saf.SafTrees
-import io.github.drivesync.core.sync.model.ConflictPolicy
 import io.github.drivesync.core.sync.model.PairSettings
 import io.github.drivesync.core.sync.model.SyncDirection
+import io.github.drivesync.core.work.GoogleAccess
 import io.github.drivesync.core.work.android.SyncScheduler
 import io.github.drivesync.feature.activity.ActivityRow
 import io.github.drivesync.feature.pairs.add.AddPairRules
@@ -28,6 +34,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.IOException
 import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
 
 @HiltViewModel
 class PairDetailViewModel
@@ -41,9 +48,13 @@ class PairDetailViewModel
         private val trees: SafTrees,
         private val scheduler: SyncScheduler,
         workManager: WorkManager,
+        private val auth: GoogleAuth,
     ) : ViewModel() {
         private val pairId: String = checkNotNull(savedState[PAIR_ID]) { "pairId missing" }
         private val local = MutableStateFlow(LocalState())
+
+        /** A Google consent screen for the route to launch (granting access again, FR-A4). */
+        val consentRequests = MutableStateFlow<IntentSender?>(null)
 
         private data class LocalState(
             val removed: Boolean = false,
@@ -81,6 +92,8 @@ class PairDetailViewModel
                         removed = extra.removed,
                         error = extra.error,
                         accessLost = !trees.isPersisted(pair.localTreeUri),
+                        googleAccessNeeded =
+                            pair.status == PairStatus.NEEDS_ATTENTION && GoogleAccess.isNeeded(pair.statusDetail),
                     )
                 }
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), PairDetailUiState())
@@ -106,9 +119,11 @@ class PairDetailViewModel
                 )
             }
 
-        fun setPolicy(policy: ConflictPolicy) = update { it.copy(conflictPolicy = policy) }
-
-        fun setMirror(mirror: Boolean) = update { it.copy(mirrorDeletions = mirror) }
+        /**
+         * Conflict policy, mirror deletions and file rules (FR-P5) apply from the next run. A new file rule never
+         * deletes anything: files that already synced stay on both sides.
+         */
+        fun edit(change: (PairSettings) -> PairSettings) = update(change)
 
         /** After access was lost: the user picked the folder again. The next run merges, so nothing is deleted. */
         fun changeFolder(treeUri: String?) {
@@ -131,6 +146,30 @@ class PairDetailViewModel
                 pairs.relink(pairId, folder.folderId)
                 scheduler.syncNow(pairId)
             }
+
+        /**
+         * Google access lapsed or was revoked: ask again with the saved access mode (full Drive access stays on),
+         * then sync every folder, since they all paused for the same reason.
+         */
+        fun grantGoogleAccess() =
+            launch {
+                val email = settings.current().accountEmail ?: throw IOException("Not signed in")
+                when (val step = googleStep { auth.authorize(GoogleAccount(email, null)) }) {
+                    AuthorizationStep.Authorized -> scheduler.syncNow()
+                    is AuthorizationStep.NeedsConsent -> consentRequests.value = step.intent.intentSender
+                }
+            }
+
+        /** Result of the consent screen; null data means the user backed out. */
+        fun onConsentResult(data: Intent?) {
+            consentRequests.value = null
+            launch {
+                when (googleStep { auth.completeAuthorization(data) }) {
+                    AuthorizationStep.Authorized -> scheduler.syncNow()
+                    is AuthorizationStep.NeedsConsent -> throw IOException("Google access wasn't granted")
+                }
+            }
+        }
 
         /** Never touches phone files; the Drive folder only goes to the trash if asked (PRD 3.8). */
         fun remove(trashDriveFolder: Boolean) =
@@ -163,4 +202,16 @@ class PairDetailViewModel
             private const val RECENT = 10
             private const val STOP_TIMEOUT_MILLIS = 5_000L
         }
+    }
+
+/** Play services reports refusals and a closed consent screen as exceptions; the screen shows them as an error. */
+private suspend fun googleStep(block: suspend () -> AuthorizationStep): AuthorizationStep =
+    try {
+        block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (
+        @Suppress("TooGenericExceptionCaught") e: Exception,
+    ) {
+        throw IOException("Google access wasn't granted", e)
     }

@@ -2,11 +2,13 @@ package io.github.drivesync.feature.settings.settings
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -21,6 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import io.github.drivesync.core.drive.api.DriveStorage
+import io.github.drivesync.core.sync.store.AccessMode
 import io.github.drivesync.core.ui.components.LoadingState
 import io.github.drivesync.core.ui.components.RootTopBar
 import io.github.drivesync.core.ui.components.SettingsGroup
@@ -56,6 +60,7 @@ fun SettingsScreen(
         ) {
             AccountSection(state, actions)
             SyncSection(state, actions)
+            AdvancedSection(state, actions)
             AppearanceSection(state, actions)
             MoreSection(state, actions)
         }
@@ -77,6 +82,7 @@ private fun AccountSection(
                 icon = Sym.AccountCircle,
             )
         }
+        state.storage?.let { storage -> item { StorageRow(storage) } }
         item {
             SettingsRow(
                 title = stringResource(R.string.settings_sign_out),
@@ -104,6 +110,36 @@ private fun AccountSection(
             },
         )
     }
+}
+
+/** Drive storage of the account (FR-M5); uploads stop once it is full, so warn before that. */
+@Composable
+private fun StorageRow(storage: DriveStorage) {
+    val used = formatBytes(storage.usedBytes)
+    val limit = storage.limitBytes
+    val amount =
+        if (limit == null) {
+            stringResource(R.string.settings_storage_unlimited, used)
+        } else {
+            stringResource(R.string.settings_storage_used, used, formatBytes(limit))
+        }
+    val colors = MaterialTheme.colorScheme
+    SettingsRow(
+        title = stringResource(R.string.settings_storage),
+        subtitle = if (storage.nearlyFull) stringResource(R.string.settings_storage_nearly_full, amount) else amount,
+        icon = if (storage.nearlyFull) Sym.Warning else Sym.CloudDone,
+        iconTint = if (storage.nearlyFull) colors.error else colors.onSurfaceVariant,
+        footer =
+            storage.fractionUsed?.let { fraction ->
+                {
+                    LinearProgressIndicator(
+                        progress = { fraction },
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        color = if (storage.nearlyFull) colors.error else colors.primary,
+                    )
+                }
+            },
+    )
 }
 
 @Composable
@@ -161,6 +197,73 @@ private fun SyncSection(
             editingName = false
         }
     }
+}
+
+/** Full Drive access (PRD 6.4): always shown so people know it exists, enabled only when the build supports it. */
+@Composable
+private fun AdvancedSection(
+    state: SettingsUiState,
+    actions: SettingsActions,
+) {
+    val on = state.settings.accessMode == AccessMode.FULL_DRIVE
+    var confirming by remember { mutableStateOf<Boolean?>(null) }
+    val subtitle =
+        stringResource(
+            when {
+                !state.fullDriveAvailable -> R.string.settings_full_drive_unavailable
+                state.fullDriveMessage == FullDriveMessage.NOT_GRANTED -> R.string.settings_full_drive_not_granted
+                state.fullDriveMessage == FullDriveMessage.FAILED -> R.string.settings_full_drive_failed
+                else -> R.string.settings_full_drive_body
+            },
+        )
+    SettingsSectionHeader(stringResource(R.string.settings_advanced))
+    SettingsGroup {
+        item {
+            SettingsSwitchRow(
+                stringResource(R.string.settings_full_drive),
+                on,
+                { confirming = it },
+                subtitle = subtitle,
+                icon = Sym.CloudSync,
+                enabled = state.fullDriveAvailable,
+            )
+        }
+        if (on && state.fullDriveAvailable) {
+            item {
+                SettingsRow(
+                    title = stringResource(R.string.settings_full_drive_renew),
+                    subtitle = stringResource(R.string.settings_full_drive_renew_body),
+                    icon = Sym.Lock,
+                    onClick = { actions.onFullDrive(true) },
+                )
+            }
+        }
+    }
+    confirming?.let { turningOn ->
+        FullDriveDialog(turningOn, onDismiss = { confirming = null }) {
+            confirming = null
+            actions.onFullDrive(turningOn)
+        }
+    }
+}
+
+/** Explains what turning full Drive access on or off does before anything changes. */
+@Composable
+private fun FullDriveDialog(
+    turningOn: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    val title = if (turningOn) R.string.settings_full_drive_on_title else R.string.settings_full_drive_off_title
+    val body = if (turningOn) R.string.settings_full_drive_on_body else R.string.settings_full_drive_off_body
+    val confirm = if (turningOn) R.string.settings_full_drive_continue else R.string.settings_full_drive_off
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(title)) },
+        text = { Text(stringResource(body)) },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(confirm)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
+    )
 }
 
 @Composable

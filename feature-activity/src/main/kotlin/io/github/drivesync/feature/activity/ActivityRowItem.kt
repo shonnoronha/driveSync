@@ -94,6 +94,7 @@ fun ActivityKind.label(): String =
             ActivityKind.FAILED -> R.string.kind_failed
             ActivityKind.PAUSED -> R.string.kind_paused
             ActivityKind.WAITING_FOR_CONFIRMATION -> R.string.kind_confirm
+            ActivityKind.RESTORED -> R.string.kind_restored
         },
     )
 
@@ -109,4 +110,5 @@ private fun ActivityKind.icon(): Int =
         ActivityKind.FAILED -> Sym.Error
         ActivityKind.PAUSED -> Sym.PauseCircle
         ActivityKind.WAITING_FOR_CONFIRMATION -> Sym.Warning
+        ActivityKind.RESTORED -> Sym.History
     }

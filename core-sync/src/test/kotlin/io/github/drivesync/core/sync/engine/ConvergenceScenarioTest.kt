@@ -34,8 +34,8 @@ class ConvergenceScenarioTest {
                 mapOf(
                     "only-local.txt" to "L",
                     "same.txt" to "same",
-                    "diff.txt" to "local version",
-                    copyOf("diff.txt") to "drive version",
+                    "diff.txt" to "drive version",
+                    copyOf("diff.txt") to "local version",
                     "Photos/2026/a.jpg" to "jpg-a",
                     "only-drive.txt" to "D",
                     "Docs/b.pdf" to "pdf-b",
@@ -159,7 +159,8 @@ class ConvergenceScenarioTest {
             a.runClean()
             b.runClean()
             a.runClean()
-            val expected = mapOf("shared.txt" to "from B", copyOf("shared.txt") to "from A")
+            // B finds A's edit already on Drive: Drive keeps it, B's own edit becomes the conflict copy.
+            val expected = mapOf("shared.txt" to "from A", copyOf("shared.txt") to "from B")
             assertEquals(expected, a.local.files())
             assertEquals(expected, b.local.files())
             a.assertMirrored()

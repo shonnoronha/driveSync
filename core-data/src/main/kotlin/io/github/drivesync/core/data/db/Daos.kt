@@ -50,6 +50,8 @@ interface PairDao {
     )
 }
 
+/** The base and its history (Rewind) share one DAO, so a change and its history row commit in one transaction. */
+@Suppress("TooManyFunctions")
 @Dao
 interface BaseDao {
     @Query("SELECT * FROM base_entries WHERE pairId = :pairId ORDER BY path")
@@ -70,23 +72,74 @@ interface BaseDao {
     @Query("SELECT hasBase FROM pairs WHERE id = :pairId")
     suspend fun hasBase(pairId: String): Boolean?
 
-    /** One transaction per executor action, so the base never disagrees with what was transferred (rule 2). */
+    /**
+     * One transaction per executor action, so the base never disagrees with what was transferred (rule 2). The
+     * change goes into the history in the same transaction (Rewind); the first recorded change also saves the base
+     * as it was, as the starting point.
+     */
     @Transaction
     suspend fun apply(
         pairId: String,
+        runAt: Long,
         puts: List<BaseEntryEntity>,
         removes: List<String>,
     ) {
+        if (puts.isNotEmpty() || removes.isNotEmpty()) {
+            if (!hasHistory(pairId)) insertHistory(entries(pairId).map { it.toHistory(runAt - 1) })
+            insertHistory(
+                removes.map { BaseHistoryEntity(pairId = pairId, runAt = runAt, path = it, present = false) } +
+                    puts.map { it.toHistory(runAt) },
+            )
+        }
         if (removes.isNotEmpty()) delete(pairId, removes)
         if (puts.isNotEmpty()) upsert(puts)
         markBaseExists(pairId)
     }
 
-    /** Forgets the base, e.g. when a pair is re-linked: the next run merges without deleting (rule 7). */
+    /**
+     * Forgets the base, e.g. when a pair is re-linked: the next run merges without deleting (rule 7). The history
+     * starts again too: points from before could not be told apart from files the merge has not seen yet.
+     */
     @Transaction
     suspend fun reset(pairId: String) {
         clear(pairId)
+        clearHistory(pairId)
         clearFlag(pairId)
+    }
+
+    @Insert
+    suspend fun insertHistory(rows: List<BaseHistoryEntity>)
+
+    @Query("SELECT EXISTS(SELECT 1 FROM base_history WHERE pairId = :pairId)")
+    suspend fun hasHistory(pairId: String): Boolean
+
+    @Query("SELECT * FROM base_history WHERE pairId = :pairId ORDER BY runAt, id")
+    suspend fun history(pairId: String): List<BaseHistoryEntity>
+
+    @Query("SELECT * FROM base_history WHERE pairId = :pairId ORDER BY runAt, id")
+    fun observeHistory(pairId: String): Flow<List<BaseHistoryEntity>>
+
+    @Query("SELECT DISTINCT pairId FROM base_history")
+    suspend fun historyPairs(): List<String>
+
+    @Query("DELETE FROM base_history WHERE pairId = :pairId")
+    suspend fun clearHistory(pairId: String)
+
+    @Query("DELETE FROM base_history WHERE pairId = :pairId AND runAt < :before")
+    suspend fun deleteHistoryBefore(
+        pairId: String,
+        before: Long,
+    )
+
+    /** Pruning: the rows before [before] give way to [origin], the state they added up to. */
+    @Transaction
+    suspend fun collapseHistory(
+        pairId: String,
+        before: Long,
+        origin: List<BaseHistoryEntity>,
+    ) {
+        deleteHistoryBefore(pairId, before)
+        insertHistory(origin)
     }
 
     @Query("DELETE FROM base_entries WHERE pairId = :pairId")

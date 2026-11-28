@@ -29,6 +29,7 @@ import io.github.drivesync.feature.pairs.detail.PairDetailRoute
 import io.github.drivesync.feature.pairs.detail.PairDetailViewModel
 import io.github.drivesync.feature.pairs.files.FilesRoute
 import io.github.drivesync.feature.pairs.home.HomeRoute
+import io.github.drivesync.feature.pairs.rewind.RewindRoute
 import io.github.drivesync.feature.settings.onboarding.OnboardingRoute
 import io.github.drivesync.feature.settings.settings.SettingsRoute
 
@@ -79,7 +80,11 @@ fun DriveSyncNavHost(
                     onBack = { nav.popBackStack() },
                     onOpenActivity = { nav.switchTab(Tab.ACTIVITY) },
                     onOpenFiles = { nav.navigate(Routes.files(pairId)) },
+                    onOpenRewind = { nav.navigate(Routes.rewind(pairId)) },
                 )
+            }
+            composable(Routes.REWIND, listOf(navArgument(PairDetailViewModel.PAIR_ID) { type = NavType.StringType })) {
+                RewindRoute(onBack = { nav.popBackStack() })
             }
             composable(Routes.FILES, listOf(navArgument(PairDetailViewModel.PAIR_ID) { type = NavType.StringType })) {
                 FilesRoute(onBack = { nav.popBackStack() }, onOpenConflicts = { nav.switchTab(Tab.CONFLICTS) })

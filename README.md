@@ -44,9 +44,20 @@ Taken on a Pixel 8 in dark mode, with colors from the wallpaper.
 - **Real two-way sync**, or one-way **backup** (phone → Drive) or **copy** (Drive → phone), per folder.
 - **Runs on its own.** Periodic syncs, about a minute after a new photo or video, when the app opens, and
   whenever you pull to refresh. Wi-Fi-only and charging-only if you like.
-- **Conflicts never lose work.** When both sides changed a file, both versions are kept by default. You can also
-  pick per file: keep the phone's, keep Drive's, or keep both.
+- **Conflicts never lose work.** When both sides changed a file, both versions are kept by default. The file on
+  Drive keeps its name; the phone's version is saved next to it as `name (conflict date device)`, on both sides.
+  (An app that had the phone file open may need to open it again.) You can also pick per file: keep the phone's,
+  keep Drive's, or keep both.
+- **Rewind.** Drag a slider to see a folder as it was after any earlier sync, and put it back, on the phone and
+  on Drive. Older versions come from Drive's own version history, newer files go to the trash (never deleted), and a
+  rewind can itself be rewound.
 - **Moves and renames** are detected, so a renamed photo is renamed on Drive instead of uploaded again.
+- **Per-folder options.** Sync only the top level of a folder, or let a folder wait for Wi-Fi or the charger.
+- **Skip what you don't need.** Per folder: patterns like `*.tmp`, `node_modules` or `Camera/old`, a size limit,
+  and hidden files. Skipped files are never deleted on either side; they just stop syncing.
+- **Drive storage at a glance** in Settings, with a warning before Drive is full.
+- **Quick Settings tile.** See at a glance whether everything is synced, and tap to sync now.
+- **Shareable activity log** for bug reports, with file and folder names hidden by default.
 - **Several phones, one Drive.** Reinstall, or set up a second phone, and link it to the same folders.
 - **Material You, done properly.** Wallpaper colors, themed icon, Google Sans Flex, rounded Material Symbols,
   expressive motion, pure black mode, and an accent picker when wallpaper colors are off.
@@ -69,14 +80,17 @@ The full reasoning lives in [`docs/PRD.md`](docs/PRD.md).
 
 ## Honest limits
 
-- **Privacy-friendly scope.** The app asks only for Google's `drive.file` permission, so it can see *only the
-  files it created*. Files you upload to the Drive Sync folders from the Drive website or other apps may not be
-  visible to it. Files uploaded by the app on your other phones are.
+- **Privacy-friendly scope.** By default the app asks only for Google's `drive.file` permission, so it can see
+  *only the files it created*. Files you upload to the Drive Sync folders from the Drive website or other apps are
+  not visible to it (confirmed on a Pixel 8). Files uploaded by the app on your other phones are. To sync those
+  website files too, turn on [Full Drive access](#full-drive-access-advanced) in your own build.
+- **Rewind reaches back about 30 days.** That is how long Drive keeps older versions (or the last 100 per file),
+  and the history starts with the first sync after updating the app.
 - **Google Docs, Sheets and Slides** have no file content, so they are skipped (and listed in the folder's details).
 - **Background timing is up to Android.** New photos sync within about a minute; other changes sync at the next
   periodic run (15 minutes to a day, your choice) or when you open the app.
-- **Early development.** Every module is built and tested, but it has not been tried on real devices yet. Don't
-  point it at your only copy of anything just yet.
+- **Early development.** Every module is built and tested, and a first round of device tests passed on a Pixel 8
+  ([`docs/device-testing.md`](docs/device-testing.md)). Still, don't point it at your only copy of anything yet.
 
 ## Build it yourself
 
@@ -98,6 +112,34 @@ them, so forks and self-builds always use their own):
    ```properties
    drivesync.googleServerClientId=1234567890-abc.apps.googleusercontent.com
    ```
+
+### Full Drive access (Advanced)
+
+An optional mode for your own build: files you add to a synced folder **from the Drive website or other apps** are
+synced to the phone too. Folders still live inside **Drive Sync**; nothing else in your Drive is touched.
+
+1. In your Cloud project's **Data access** page, add the scope `https://www.googleapis.com/auth/drive`.
+2. Keep the app in **Testing** and add your Google account as a **test user** (Audience page).
+3. Tell the build that your client has the scope, in `local.properties`:
+
+   ```properties
+   drivesync.fullDriveScope=true
+   ```
+
+4. In the app: **Settings → Advanced → Full Drive access**. Google shows a "Google hasn't verified this app"
+   warning. That's expected for your own project: choose **Advanced**, then continue.
+
+Things to know:
+
+- It's a **restricted** scope. A publicly distributed app would need Google's restricted-scope verification and a
+  yearly security assessment (CASA), which is why this stays a bring-your-own-client option.
+- Projects in Testing may have to grant access again after a while (possibly every 7 days). If syncing stops with
+  "Sign in to Google again", tap **Ask Google again** under the switch.
+- Turning it off keeps every file on the phone. Each folder is then checked once without deleting anything, so
+  phone copies of website files may be uploaded again as separate files.
+- Files someone else owns, or whose owner turned off downloads, show a per-file error and the rest keeps syncing.
+- When Drive holds two files with the same name, Drive is left as it is: the second one is saved on the phone as
+  `name (conflict …)` and gets its real name back once you rename or remove the other one on Drive.
 
 ## Under the hood
 

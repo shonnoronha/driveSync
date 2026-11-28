@@ -1,5 +1,6 @@
 package io.github.drivesync.core.sync.plan
 
+import io.github.drivesync.core.sync.model.BaseSnapshot
 import io.github.drivesync.core.sync.model.LocalEntry
 import io.github.drivesync.core.sync.model.RemoteEntry
 import io.github.drivesync.core.sync.model.Snapshot
@@ -10,7 +11,7 @@ import io.github.drivesync.core.sync.model.Snapshot
  * Safety rules enforced here:
  * 1. An unreachable or suddenly empty side pauses the pair; it never produces deletes.
  * 3. Each side is compared only with its own base values; timestamps cross sides only for NEWEST_WINS.
- * 6. Temp/ignored files are invisible to the planner.
+ * 6. Temp/ignored files, and files the user's rules exclude (FR-P5), are invisible to the planner.
  * 7. Without a base the planner only merges (link / copy / keep-both) and never deletes.
  * 8. One-way pairs propagate deletes only with "mirror deletions".
  * 9. The mass-delete guard asks before deleting > 20 files and > 10% of the pair.
@@ -30,12 +31,24 @@ object SyncPlanner {
     }
 
     private fun planAvailable(
-        input: PlanInput,
+        original: PlanInput,
         localSnapshot: Snapshot.Available<LocalEntry>,
         remoteSnapshot: Snapshot.Available<RemoteEntry>,
     ): PlanResult {
-        val (localIgnored, local) = localSnapshot.entries.partition { IgnoreRules.isIgnored(it.path) }
-        val (remoteIgnored, remoteAll) = remoteSnapshot.entries.partition { IgnoreRules.isIgnored(it.path) }
+        val (localIgnored, localAll) = localSnapshot.entries.partition { IgnoreRules.isIgnored(it.path) }
+        val (remoteIgnored, remoteVisible) = remoteSnapshot.entries.partition { IgnoreRules.isIgnored(it.path) }
+        // FR-P5: a user rule hides a path on both sides and in the base, so it can never turn into a delete.
+        val excluded =
+            original.settings.filters.excludedPaths(localAll, remoteVisible, original.base?.entries.orEmpty())
+        val (localExcluded, local) = localAll.partition { it.path in excluded }
+        val (remoteExcluded, remoteAll) = remoteVisible.partition { it.path in excluded }
+        val input =
+            if (excluded.isEmpty()) {
+                original
+            } else {
+                val base = original.base?.let { b -> BaseSnapshot(b.entries.filter { it.path !in excluded }) }
+                original.copy(base = base)
+            }
         val (googleNative, remote) = remoteAll.partition { it.isGoogleNative }
         suddenlyEmpty(input, local, remote)?.let { return PlanResult.Paused(it) }
 
@@ -45,8 +58,8 @@ object SyncPlanner {
                 remote = remote,
                 input = input,
                 preSkipped = googleNative.map { Skipped(it.path, SkipReason.GOOGLE_NATIVE) },
-                localUntracked = localIgnored.map { it.path },
-                remoteUntracked = (remoteIgnored + googleNative).map { it.path },
+                localUntracked = (localIgnored + localExcluded).map { it.path },
+                remoteUntracked = (remoteIgnored + remoteExcluded + googleNative).map { it.path },
             ).build()
 
         // Rule 7, belt and braces: a run without a base never deletes anything.

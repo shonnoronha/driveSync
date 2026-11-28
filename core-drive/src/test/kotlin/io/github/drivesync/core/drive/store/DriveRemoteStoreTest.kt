@@ -37,6 +37,17 @@ class DriveRemoteStoreTest {
         assertEquals(AccessMode.APP_FOLDER, store.accessMode)
     }
 
+    @Test
+    fun `full drive sees files from other apps`() =
+        runTest {
+            // The fake server has no per-app visibility: this checks the mode is carried and the listing unchanged.
+            val full = DriveRemoteStore(drive.client(), pair, AccessMode.FULL_DRIVE)
+            drive.file("from-website.pdf", pair, "pdf bytes")
+            assertEquals(AccessMode.FULL_DRIVE, full.accessMode)
+            val entries = assertInstanceOf(Snapshot.Available::class.java, full.scan()).entries
+            assertEquals(listOf("from-website.pdf"), entries.map { (it as RemoteEntry).path.value })
+        }
+
     @Nested
     inner class Scan {
         @Test

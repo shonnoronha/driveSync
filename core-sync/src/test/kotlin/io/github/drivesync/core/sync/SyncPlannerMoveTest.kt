@@ -191,7 +191,7 @@ class SyncPlannerMoveTest {
             val blocker = local("new.txt", "other")
             val plan = planReady(listOf(l, blocker), listOf(movedR), listOf(oldBase))
             val kinds = plan.actions.map { it::class.simpleName }
-            assertEquals(listOf("MoveRemote", "Upload", "Download", "RecycleLocal"), kinds)
+            assertEquals(listOf("MoveLocal", "Upload", "Download", "RecycleLocal"), kinds)
         }
 
         @Test

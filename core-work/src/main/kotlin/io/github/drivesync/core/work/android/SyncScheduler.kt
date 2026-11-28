@@ -37,16 +37,19 @@ class SyncScheduler
         }
 
         /**
-         * Runs now (PRD 3.4 D): one pair, or all of them. The user asked, so only a connection is required; Wi-Fi-only
-         * and charging-only rules apply to automatic runs.
+         * Runs now (PRD 3.4 D): one pair, or all of them. Only a connection is required; the app-wide Wi-Fi-only and
+         * charging-only rules apply to periodic runs. A one-pair run is always the user's request, so it also ignores
+         * that folder's own rules; an all-pairs run ignores them only when [manual] (the user tapped "sync all"),
+         * not when the app opens.
          */
         fun syncNow(
             pairId: String? = null,
             deletionsConfirmed: Boolean = false,
+            manual: Boolean = false,
         ) {
             val data =
                 if (pairId == null) {
-                    workDataOf(SyncWorker.KEY_MODE to SyncWorker.MODE_ALL)
+                    workDataOf(SyncWorker.KEY_MODE to SyncWorker.MODE_ALL, SyncWorker.KEY_MANUAL to manual)
                 } else {
                     workDataOf(
                         SyncWorker.KEY_MODE to SyncWorker.MODE_PAIR,
@@ -65,6 +68,30 @@ class SyncScheduler
             // A confirmation must not be dropped behind an ordinary queued run.
             val policy = if (deletionsConfirmed) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP
             workManager.enqueueUniqueWork(NOW_PREFIX + (pairId ?: "all"), policy, request)
+        }
+
+        /**
+         * Rewind (one pair) to the history point [point]. Runs on any connection, like "sync now"; a second request
+         * while one runs is dropped, so the screen follows the one in progress by [rewindWorkName].
+         */
+        fun rewind(
+            pairId: String,
+            point: Long,
+        ) {
+            val request =
+                OneTimeWorkRequestBuilder<SyncWorker>()
+                    .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                    .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                    .setInputData(
+                        workDataOf(
+                            SyncWorker.KEY_MODE to SyncWorker.MODE_REWIND,
+                            SyncWorker.KEY_PAIR_ID to pairId,
+                            SyncWorker.KEY_REWIND_POINT to point,
+                        ),
+                    ).addTag(TAG)
+                    .addTag(PAIR_TAG_PREFIX + pairId)
+                    .build()
+            workManager.enqueueUniqueWork(rewindWorkName(pairId), ExistingWorkPolicy.KEEP, request)
         }
 
         /**
@@ -107,6 +134,9 @@ class SyncScheduler
             const val MEDIA = "sync-media"
             const val NOW_PREFIX = "sync-now-"
             private const val PAIR_TAG_PREFIX = "pair:"
+            private const val REWIND_PREFIX = "rewind-"
+
+            fun rewindWorkName(pairId: String): String = REWIND_PREFIX + pairId
 
             /** The pair a one-pair run belongs to, from its WorkInfo tags; null for all-pairs runs. */
             fun pairIdOf(tags: Set<String>): String? =

@@ -71,10 +71,20 @@ class DriveHttpTest {
         @Test
         fun `other 403s are not retried`() =
             runTest {
-                drive.failNext(FakeDriveServer.error(403, "insufficientFilePermissions"), match = isGet())
+                drive.failNext(FakeDriveServer.error(403, "domainPolicy"), match = isGet())
                 val e = assertThrows<DriveException.Http> { client().getOrNull(folder) }
                 assertEquals(403, e.code)
-                assertEquals("insufficientFilePermissions", e.reason)
+                assertEquals("domainPolicy", e.reason)
+                assertEquals(emptyList<Long>(), sleeps)
+            }
+
+        @ParameterizedTest
+        @ValueSource(strings = ["insufficientFilePermissions", "cannotDownloadFile"])
+        fun `per-file 403s read as no permission`(reason: String) =
+            runTest {
+                drive.failNext(FakeDriveServer.error(403, reason), match = isGet())
+                val e = assertThrows<DriveException.NoPermission> { client().getOrNull(folder) }
+                assertTrue(e.message.orEmpty().startsWith("You don't have permission"))
                 assertEquals(emptyList<Long>(), sleeps)
             }
 

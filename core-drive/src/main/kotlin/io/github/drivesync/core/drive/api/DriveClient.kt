@@ -28,6 +28,15 @@ class DriveClient(
         return files
     }
 
+    /** How full the account's storage is (shared by Drive, Gmail and Photos). */
+    suspend fun storage(): DriveStorage {
+        val quota = api.about().body("read storage quota").storageQuota
+        return DriveStorage(
+            usedBytes = quota.usage?.toLongOrNull() ?: 0,
+            limitBytes = quota.limit?.toLongOrNull(),
+        )
+    }
+
     /** The file, or null when Drive says it does not exist (or this app cannot see it). */
     suspend fun getOrNull(fileId: String): DriveFile? {
         val response = api.get(fileId)
@@ -70,6 +79,29 @@ class DriveClient(
         sink: OutputStream,
     ) {
         val body = api.download(fileId).body("download $fileId")
+        body.use { it.byteStream().copyTo(sink) }
+    }
+
+    /** Every version Drive keeps of [fileId], oldest first. Empty when the file is gone for good. */
+    suspend fun revisions(fileId: String): List<DriveRevision> {
+        val revisions = mutableListOf<DriveRevision>()
+        var pageToken: String? = null
+        do {
+            val response = api.revisions(fileId, pageToken = pageToken)
+            if (response.code() == HTTP_NOT_FOUND) return emptyList()
+            val page = response.body("list versions of $fileId")
+            revisions += page.revisions
+            pageToken = page.nextPageToken
+        } while (pageToken != null)
+        return revisions
+    }
+
+    suspend fun downloadRevision(
+        fileId: String,
+        revisionId: String,
+        sink: OutputStream,
+    ) {
+        val body = api.downloadRevision(fileId, revisionId).body("download version $revisionId of $fileId")
         body.use { it.byteStream().copyTo(sink) }
     }
 

@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import io.github.drivesync.core.sync.store.AccessMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -30,6 +31,8 @@ data class AppSettings(
     val seedColor: Int = DEFAULT_SEED_COLOR,
     /** Pure black backgrounds in dark mode, for OLED screens. */
     val amoled: Boolean = false,
+    /** How the app reaches Drive (PRD 6.4): `drive.file` by default, full Drive only after the user opts in. */
+    val accessMode: AccessMode = AccessMode.APP_FOLDER,
 ) {
     companion object {
         const val MIN_INTERVAL_MINUTES = 15
@@ -62,6 +65,9 @@ class SettingsRepository
                     dynamicColor = p[DYNAMIC_COLOR] ?: true,
                     seedColor = p[SEED_COLOR] ?: AppSettings.DEFAULT_SEED_COLOR,
                     amoled = p[AMOLED] ?: false,
+                    accessMode =
+                        p[ACCESS_MODE]?.let { name -> AccessMode.entries.firstOrNull { it.name == name } }
+                            ?: AccessMode.APP_FOLDER,
                 )
             }
 
@@ -109,6 +115,9 @@ class SettingsRepository
             it[AMOLED] = amoled
         }
 
+        /** Save only after Google granted the scopes of [mode]; background syncs read it for every token. */
+        suspend fun setAccessMode(mode: AccessMode) = store.edit { it[ACCESS_MODE] = mode.name }
+
         /** FR-A5: sign out clears every setting. */
         suspend fun clear() = store.edit { it.clear() }
 
@@ -131,5 +140,6 @@ class SettingsRepository
             val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
             val SEED_COLOR = intPreferencesKey("seed_color")
             val AMOLED = booleanPreferencesKey("amoled")
+            val ACCESS_MODE = stringPreferencesKey("access_mode")
         }
     }

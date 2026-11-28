@@ -1,10 +1,13 @@
 package io.github.drivesync.core.drive
 
+import io.github.drivesync.core.drive.api.DriveAbout
 import io.github.drivesync.core.drive.api.DriveApi
 import io.github.drivesync.core.drive.api.DriveClient
 import io.github.drivesync.core.drive.api.DriveFile
 import io.github.drivesync.core.drive.api.DriveFileList
 import io.github.drivesync.core.drive.api.DriveFileMetadata
+import io.github.drivesync.core.drive.api.DriveRevision
+import io.github.drivesync.core.drive.api.DriveRevisionList
 import io.github.drivesync.core.drive.auth.AuthProvider
 import io.github.drivesync.core.drive.http.BackoffPolicy
 import io.github.drivesync.core.drive.http.DriveHttp
@@ -38,6 +41,9 @@ class FakeDriveServer :
         val createdTime: Long = 0,
     ) {
         val isFolder get() = mimeType == DriveFile.FOLDER_MIME_TYPE
+
+        /** Every content the file had, like Drive's revisions: (time, bytes). */
+        val revisions: MutableList<Pair<Long, ByteArray>> = mutableListOf()
     }
 
     private class Session(
@@ -100,6 +106,9 @@ class FakeDriveServer :
         mimeType: String = "text/plain",
     ): String = add(name, mimeType, parent, content.toByteArray(), emptyMap()).id
 
+    /** What `about.get` returns. */
+    var about: DriveAbout = DriveAbout(DriveAbout.StorageQuota(limit = "16106127360", usage = "1073741824"))
+
     fun node(id: String): Node = synchronized(this) { nodes.getValue(id) }
 
     fun exists(id: String) = synchronized(this) { id in nodes }
@@ -112,6 +121,7 @@ class FakeDriveServer :
         n.content = content.toByteArray()
         n.version++
         n.modifiedTime = tick()
+        n.revisions += n.modifiedTime to n.content
     }
 
     fun trash(id: String) = synchronized(this) { nodes.getValue(id).trashed = true }
@@ -177,7 +187,10 @@ class FakeDriveServer :
         val path = request.url.encodedPath
         val id = path.substringAfterLast('/')
         return when {
+            request.method == "GET" && path == "/drive/v3/about" -> ok(json.encodeToString(about))
             request.method == "GET" && path == "/drive/v3/files" -> list(request)
+            request.method == "GET" && path.matches(REVISIONS) -> revisions(path.split('/')[4])
+            request.method == "GET" && path.matches(REVISION) -> revision(path.split('/')[4], id)
             request.method == "GET" && path.startsWith("/drive/v3/files/") -> get(id, request)
             request.method == "POST" && path == "/drive/v3/files" -> create(request.metadata())
             request.method == "PATCH" && path.startsWith("/drive/v3/files/") -> update(id, request)
@@ -207,6 +220,30 @@ class FakeDriveServer :
             return MockResponse.Builder().body(okio.Buffer().write(node.content)).build()
         }
         return ok(node.toDto())
+    }
+
+    private fun revisions(fileId: String): MockResponse {
+        val node = nodes[fileId] ?: return error(HTTP_NOT_FOUND, "notFound")
+        val list =
+            node.revisions.mapIndexed { i, (time, bytes) ->
+                DriveRevision(
+                    id = "${i + 1}",
+                    modifiedTime = Instant.ofEpochMilli(time).toString(),
+                    md5Checksum = md5Hex(bytes),
+                    size = bytes.size.toString(),
+                )
+            }
+        return ok(json.encodeToString(DriveRevisionList(list)))
+    }
+
+    private fun revision(
+        fileId: String,
+        revisionId: String,
+    ): MockResponse {
+        val bytes =
+            nodes[fileId]?.revisions?.getOrNull(revisionId.toInt() - 1)?.second
+                ?: return error(HTTP_NOT_FOUND, "notFound")
+        return MockResponse.Builder().body(okio.Buffer().write(bytes)).build()
     }
 
     private fun create(metadata: DriveFileMetadata): MockResponse {
@@ -292,6 +329,7 @@ class FakeDriveServer :
                 )
             }
         node.modifiedTime = modified
+        node.revisions += modified to node.content
         return ok(node.toDto())
     }
 
@@ -345,6 +383,7 @@ class FakeDriveServer :
                     createdTime = now,
                 )
             nodes[node.id] = node
+            if (!node.isFolder) node.revisions += now to content
             node
         }
 
@@ -384,6 +423,8 @@ class FakeDriveServer :
         const val MY_DRIVE = "root"
         const val GOOGLE_APPS = "application/vnd.google-apps."
         private const val SESSION_PATH = "/upload/session/"
+        private val REVISIONS = Regex("/drive/v3/files/[^/]+/revisions")
+        private val REVISION = Regex("/drive/v3/files/[^/]+/revisions/[^/]+")
         private const val HTTP_RESUME_INCOMPLETE = 308
         private const val HTTP_NO_CONTENT = 204
         private const val HTTP_BAD_REQUEST = 400

@@ -4,7 +4,6 @@ import io.github.drivesync.core.sync.model.BaseEntry
 import io.github.drivesync.core.sync.model.BaseSnapshot
 import io.github.drivesync.core.sync.model.LocalEntry
 import io.github.drivesync.core.sync.model.RelPath
-import io.github.drivesync.core.sync.model.RemoteEntry
 import io.github.drivesync.core.sync.plan.IgnoreRules
 import io.github.drivesync.core.sync.plan.MoveReason
 import io.github.drivesync.core.sync.plan.SyncAction
@@ -29,6 +28,9 @@ class SyncExecutor(
     private val remote: RemoteStore,
     private val baseStore: BaseStore,
 ) {
+    private val temps = TempFiles(local)
+    private val restorer = Restorer(local, remote, temps) { commit(it) }
+
     suspend fun execute(
         plan: SyncPlan,
         base: BaseSnapshot?,
@@ -82,6 +84,7 @@ class SyncExecutor(
             is SyncAction.ForgetBase -> commit(BaseUpdate.Remove(action.path))
             is SyncAction.TrashRemote -> trashRemote(action)
             is SyncAction.RecycleLocal -> recycleLocal(action)
+            is SyncAction.Restore -> restorer.restore(action)
         }
 
     // ---- Folders ----
@@ -129,6 +132,7 @@ class SyncExecutor(
                     localLastModified = localNow.lastModified,
                     remoteFileId = moved.fileId,
                     remoteVersion = moved.version,
+                    remotePath = drivePathIfDifferent(moved, action.path),
                 ),
             ),
         )
@@ -142,8 +146,14 @@ class SyncExecutor(
         if (current == null || !current.matches(action.local)) return ActionOutcome.Replan("local file changed")
         if (local.stat(action.path) != null) return ActionOutcome.Replan("${action.path} is taken locally")
         val moved = local.move(action.from, action.path)
-        if (action.reason != MoveReason.DETECTED_MOVE) return ActionOutcome.Done
+        if (action.reason == MoveReason.CONFLICT_COPY) {
+            // Keep-both: the original name now waits for the Drive version. Without its base entry, a failed or
+            // interrupted download is retried as a new Drive file next run, not read as a phone-side delete.
+            return if (action.from in base) commit(BaseUpdate.Remove(action.from)) else ActionOutcome.Done
+        }
+        // A Drive move or a resolved name clash: the base entry follows the file.
         val old = base[action.from] ?: return commit(BaseUpdate.Remove(action.from))
+        val drive = action.remote
         return commit(
             BaseUpdate.Remove(action.from),
             BaseUpdate.Put(
@@ -151,8 +161,9 @@ class SyncExecutor(
                     path = action.path,
                     localSize = moved.size,
                     localLastModified = moved.lastModified,
-                    remoteFileId = action.remote?.fileId ?: old.remoteFileId,
-                    remoteVersion = action.remote?.version ?: old.remoteVersion,
+                    remoteFileId = drive?.fileId ?: old.remoteFileId,
+                    remoteVersion = drive?.version ?: old.remoteVersion,
+                    remotePath = if (drive != null) drivePathIfDifferent(drive, action.path) else old.remotePath,
                 ),
             ),
         )
@@ -166,9 +177,11 @@ class SyncExecutor(
         if (now == null || !now.matches(planned)) return ActionOutcome.Replan("local file changed since scan")
         recheckUploadTarget(action)?.let { return it }
 
+        // Overwrites keep the Drive file's own name, which differs from the phone's for a name-clash copy.
+        val drivePath = action.replaces?.path ?: action.path
         val uploaded =
             local.read(action.path) { input ->
-                remote.upload(action.path, action.replaces?.fileId, planned.lastModified, input) {
+                remote.upload(drivePath, action.replaces?.fileId, planned.lastModified, input) {
                     local.stat(action.path)?.matches(planned) == true
                 }
             } ?: return ActionOutcome.Replan("local file changed during upload")
@@ -186,6 +199,7 @@ class SyncExecutor(
                     localLastModified = planned.lastModified,
                     remoteFileId = uploaded.fileId,
                     remoteVersion = uploaded.version,
+                    remotePath = drivePathIfDifferent(uploaded, action.path),
                 ),
             ),
         )
@@ -217,18 +231,8 @@ class SyncExecutor(
         if (current == null || !current.matches(planned)) return ActionOutcome.Replan("Drive file changed since scan")
 
         val temp = IgnoreRules.tempPathFor(action.path)
-        val written =
-            try {
-                local.writeTemp(temp) { sink -> remote.download(planned.fileId, sink) }
-            } catch (e: CancellationException) {
-                throw e // A killed run leaves the temp file; the next run deletes it.
-            } catch (
-                @Suppress("TooGenericExceptionCaught") e: Exception,
-            ) {
-                runCatching { local.deleteTemp(temp) }
-                throw e
-            }
-        val verified = verifyTemp(temp, written, current)
+        val written = temps.write(temp) { sink -> remote.download(planned.fileId, sink) }
+        val verified = temps.verify(temp, written, current.size, current.md5)
         if (verified != null) {
             local.deleteTemp(temp)
             return verified
@@ -255,22 +259,10 @@ class SyncExecutor(
                     localLastModified = committed.lastModified,
                     remoteFileId = current.fileId,
                     remoteVersion = current.version,
+                    remotePath = drivePathIfDifferent(current, action.path),
                 ),
             ),
         )
-    }
-
-    /** Rule 6: the temp file must have the expected size and MD5 before it may replace anything. */
-    private suspend fun verifyTemp(
-        temp: RelPath,
-        written: LocalEntry,
-        expected: RemoteEntry,
-    ): ActionOutcome? {
-        if (written.size != expected.size) {
-            return ActionOutcome.Failed("downloaded ${written.size} bytes, expected ${expected.size}")
-        }
-        val md5 = expected.md5 ?: return null
-        return if (local.md5(temp) == md5) null else ActionOutcome.Failed("downloaded file failed MD5 check")
     }
 
     // ---- Bookkeeping ----
@@ -293,6 +285,7 @@ class SyncExecutor(
                     localLastModified = l.lastModified,
                     remoteFileId = r.fileId,
                     remoteVersion = r.version,
+                    remotePath = drivePathIfDifferent(r, action.path),
                 )
             }
         return commit(BaseUpdate.Put(entry))
@@ -324,15 +317,6 @@ class SyncExecutor(
             path: RelPath,
             remoteFileId: String?,
         ) = BaseEntry(path = path, isFolder = true, remoteFileId = remoteFileId)
-
-        fun RemoteEntry.matches(planned: RemoteEntry): Boolean {
-            val sameContent = if (md5 != null && planned.md5 != null) md5 == planned.md5 else version == planned.version
-            return fileId == planned.fileId && path == planned.path && isFolder == planned.isFolder && sameContent
-        }
-
-        /** Folders only need to still be folders; files must keep size and mtime. */
-        fun LocalEntry.matches(planned: LocalEntry): Boolean =
-            isFolder == planned.isFolder && (isFolder || (size == planned.size && lastModified == planned.lastModified))
 
         fun LocalEntry.matchesBase(base: BaseEntry?): Boolean =
             base != null && size == base.localSize && lastModified == base.localLastModified

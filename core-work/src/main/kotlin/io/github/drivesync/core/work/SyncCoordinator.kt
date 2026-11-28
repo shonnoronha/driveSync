@@ -1,10 +1,12 @@
 package io.github.drivesync.core.work
 
 import io.github.drivesync.core.data.activity.ActivityRepository
+import io.github.drivesync.core.data.history.HistoryRepository
 import io.github.drivesync.core.data.pairs.PairRepository
 import io.github.drivesync.core.data.pairs.SyncPair
 import io.github.drivesync.core.data.settings.SettingsRepository
 import io.github.drivesync.core.sync.engine.SyncProgress
+import io.github.drivesync.core.sync.plan.RewindRefusal
 import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -22,15 +24,21 @@ class SyncCoordinator
         private val notifier: SyncNotifier,
         private val activity: ActivityRepository,
         private val environment: SyncEnvironment,
+        private val history: HistoryRepository,
     ) {
-        /** Syncs every enabled pair matching [filter]. Returns true when a transient failure asks for a retry. */
+        /**
+         * Syncs every enabled pair matching [filter]. Automatic runs skip folders whose own Wi-Fi or charging rule
+         * is not met right now (FR-P4); a [manual] "sync all now" includes them. Returns true when a transient
+         * failure asks for a retry.
+         */
         suspend fun syncAll(
             filter: (SyncPair) -> Boolean = { true },
             onProgress: PairProgressListener = PairProgressListener.NONE,
+            manual: Boolean = false,
         ): Boolean {
             val app = settings.current()
             if (app.accountEmail == null) return false // Not signed in: nothing to sync yet.
-            val due = pairs.pairs().filter { it.enabled && filter(it) }
+            val due = pairs.pairs().filter { it.enabled && filter(it) && (manual || conditionsMet(it)) }
             val results =
                 due.map { pair ->
                     pair to
@@ -53,6 +61,23 @@ class SyncCoordinator
             val result = runner.run(pairId, app.deviceName, deletionsConfirmed) { onProgress.onProgress(pair, it) }
             notify(listOf(pair to result))
             return result is RunResult.Retry
+        }
+
+        /** Rewind, on the user's request (see [PairSyncRunner.rewind]). */
+        suspend fun rewind(
+            pairId: String,
+            point: Long,
+            onProgress: PairProgressListener = PairProgressListener.NONE,
+        ): RewindResult {
+            if (settings.current().accountEmail == null) return RewindResult.Refused(RewindRefusal.NO_HISTORY)
+            val pair = pairs.pair(pairId) ?: return RewindResult.Refused(RewindRefusal.NO_HISTORY)
+            return runner.rewind(pairId, point) { onProgress.onProgress(pair, it) }
+        }
+
+        private fun conditionsMet(pair: SyncPair): Boolean {
+            val conditions = pair.settings.conditions
+            if (!conditions.wifiOnly && !conditions.chargingOnly) return true
+            return conditions.allow(environment.unmeteredNetwork(), environment.charging())
         }
 
         private fun notify(results: List<Pair<SyncPair, RunResult>>) {
@@ -88,8 +113,12 @@ class SyncCoordinator
                     .toInstant()
                     .toEpochMilli()
             activity.prune(before = now - TimeUnit.DAYS.toMillis(retentionDays.toLong()))
+            // Drive keeps old versions for about 30 days, so Rewind points older than that rarely work.
+            history.prune(before = now - TimeUnit.DAYS.toMillis(HISTORY_DAYS))
         }
     }
+
+private const val HISTORY_DAYS = 30L
 
 /** Progress of the pair being synced right now. */
 fun interface PairProgressListener {

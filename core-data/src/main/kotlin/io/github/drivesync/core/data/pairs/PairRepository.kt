@@ -69,7 +69,7 @@ class PairRepository(
                 statusDetail = null,
                 lastSyncAt = null,
                 createdAt = clock(),
-            )
+            ).withSettings(settings)
         db.pairs().upsert(entity)
         return entity.toModel()
     }
@@ -79,15 +79,7 @@ class PairRepository(
         settings: PairSettings,
     ) {
         val current = db.pairs().get(id) ?: return
-        db.pairs().upsert(
-            current.copy(
-                direction = settings.direction,
-                conflictPolicy = settings.conflictPolicy,
-                mirrorDeletions = settings.mirrorDeletions,
-                massDeleteMinFiles = settings.massDeleteGuard.minFiles,
-                massDeleteMinFraction = settings.massDeleteGuard.minFraction,
-            ),
-        )
+        db.pairs().upsert(current.withSettings(settings))
     }
 
     suspend fun setEnabled(
@@ -123,8 +115,12 @@ class PairRepository(
      */
     suspend fun restoreInsteadOfDelete(id: String) = db.base().reset(id)
 
+    /** Drops the base so the pair's next run only merges (PRD 3.9 rule 7): it can't delete anything. */
+    suspend fun mergeOnlyNextRun(id: String) = db.base().reset(id)
+
     /** Stops syncing and forgets the pair's records. Never touches files on either side (PRD 3.8). */
     suspend fun remove(id: String) = db.pairs().delete(id)
 
-    fun baseStore(pairId: String): BaseStore = RoomBaseStore(db.base(), pairId)
+    /** One per run: its changes form one point of the pair's history (Rewind). */
+    fun baseStore(pairId: String): BaseStore = RoomBaseStore(db.base(), pairId, clock())
 }

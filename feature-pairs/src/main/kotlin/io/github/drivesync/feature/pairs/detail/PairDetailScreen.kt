@@ -54,6 +54,7 @@ fun PairDetailScreen(
             StatusSection(pair, state, actions)
             FolderSection(pair, actions)
             OptionsSection(state, actions)
+            ConditionsSection(state.settings.conditions, actions.onEdit)
             RecentSection(state, actions)
             RemoveSection(pair.name, actions)
         }

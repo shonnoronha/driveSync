@@ -97,6 +97,24 @@
     <string name="add_drive_folder">Drive folder</string>
     <string name="detail_access_lost_hint">Android removes an app\'s access when a folder is renamed or moved. Choose the folder again to continue; nothing is deleted.</string>
     <string name="detail_give_access">Give access again</string>
+    <string name="rules_title">Skip files</string>
+    <string name="rules_none">Everything syncs</string>
+    <plurals name="rules_patterns">
+        <item quantity="one">%1$d pattern</item>
+        <item quantity="other">%1$d patterns</item>
+    </plurals>
+    <string name="rules_over">Over %1$s</string>
+    <string name="rules_hidden_short">hidden files</string>
+    <string name="rules_body">Matching files stop syncing. Nothing is deleted on either side: files that already synced stay where they are.</string>
+    <string name="rules_patterns_label">Patterns, one per line</string>
+    <string name="rules_patterns_placeholder">*.tmp\nnode_modules\nCamera/old</string>
+    <string name="rules_patterns_help">A name like *.tmp matches anywhere; a path like Camera/old starts at this folder. * matches within a name, ** across folders.</string>
+    <string name="rules_size">Skip big files</string>
+    <string name="rules_size_none">No size limit</string>
+    <string name="rules_hidden">Skip hidden files (names starting with a dot)</string>
+    <string name="rules_save">Save</string>
+    <string name="detail_google_access">Give Google access again</string>
+    <string name="detail_google_access_hint">Google stopped letting Drive Sync reach your Drive (access expired or was removed). Allow it again and every folder carries on; nothing was deleted.</string>
     <string name="detail_files">Files</string>
     <string name="detail_files_body">See which files are synced</string>
     <string name="files_title">Files</string>
@@ -133,4 +151,58 @@
     <string name="files_empty_all_synced_body">No file in this folder is waiting to sync.</string>
     <string name="files_show_all">Show all files</string>
     <string name="files_check_again">Check again</string>
+    <string name="detail_subfolders">Include subfolders</string>
+    <string name="detail_subfolders_body">When off, only the files directly in this folder sync. Files already in subfolders stay where they are, on both sides.</string>
+    <string name="detail_conditions">Automatic syncs</string>
+    <string name="detail_wifi_only">Wi-Fi only</string>
+    <string name="detail_wifi_only_body">This folder waits for Wi-Fi. Sync now still works on mobile data.</string>
+    <string name="detail_charging_only">Only while charging</string>
+    <string name="detail_charging_only_body">This folder waits until the phone is plugged in. Sync now works any time.</string>
+    <string name="detail_rewind">Rewind</string>
+    <string name="detail_rewind_body">Put this folder back the way it was after an earlier sync</string>
+    <string name="rewind_title">Rewind %1$s</string>
+    <string name="rewind_back_to">Go back to</string>
+    <string name="rewind_now">Now</string>
+    <string name="rewind_today">Today, %1$s</string>
+    <string name="rewind_go">Rewind to here</string>
+    <string name="rewind_no_changes">Nothing changes at this point. Drag back to an earlier sync.</string>
+    <string name="rewind_running">Rewinding…</string>
+    <string name="rewind_empty_title">No history yet</string>
+    <string name="rewind_empty_body">Every sync that changes something adds a point to come back to. Sync this folder, change a file, and come back.</string>
+    <string name="rewind_kind_restore">An older version comes back</string>
+    <string name="rewind_kind_back">Comes back</string>
+    <string name="rewind_kind_trash">Goes to the trash</string>
+    <string name="rewind_confirm_title">Rewind %1$s?</string>
+    <string name="rewind_confirm_body">The folder goes back to how it was at %1$s, on the phone and on Drive. Nothing is deleted for good: newer files go to the Drive trash and the phone\'s recycle folder, and this rewind can be undone too. Files changed since the last sync are left alone.</string>
+    <string name="rewind_confirm">Rewind</string>
+    <string name="rewind_refused_empty">The folder was empty then, so going back would only move everything to the trash.</string>
+    <string name="rewind_refused_gone">That point is no longer in the history.</string>
+    <string name="rewind_refused_none">This folder has not synced yet.</string>
+    <string name="rewind_refused_local">The phone folder can\'t be read right now. Nothing was changed.</string>
+    <string name="rewind_refused_drive">The Drive folder can\'t be reached right now. Nothing was changed.</string>
+    <string name="rewind_stopped">Rewind stopped: %1$s</string>
+    <plurals name="rewind_restore">
+        <item quantity="one">%d file goes back to an older version</item>
+        <item quantity="other">%d files go back to an older version</item>
+    </plurals>
+    <plurals name="rewind_back">
+        <item quantity="one">%d file comes back</item>
+        <item quantity="other">%d files come back</item>
+    </plurals>
+    <plurals name="rewind_trash">
+        <item quantity="one">%d newer file goes to the trash</item>
+        <item quantity="other">%d newer files go to the trash</item>
+    </plurals>
+    <plurals name="rewind_done">
+        <item quantity="one">Rewind finished: %d change.</item>
+        <item quantity="other">Rewind finished: %d changes.</item>
+    </plurals>
+    <plurals name="rewind_skipped">
+        <item quantity="one">%d file was left alone: it changed since the last sync, or Drive no longer has that version.</item>
+        <item quantity="other">%d files were left alone: they changed since the last sync, or Drive no longer has those versions.</item>
+    </plurals>
+    <plurals name="rewind_failed">
+        <item quantity="one">%d failed; Activity has the details.</item>
+        <item quantity="other">%d failed; Activity has the details.</item>
+    </plurals>
 </resources>

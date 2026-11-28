@@ -11,7 +11,15 @@ enum class ActivityFilter(
     val kinds: Set<ActivityKind>?,
 ) {
     ALL(null),
-    TRANSFERS(setOf(ActivityKind.UPLOADED, ActivityKind.DOWNLOADED, ActivityKind.MOVED, ActivityKind.FOLDER_CREATED)),
+    TRANSFERS(
+        setOf(
+            ActivityKind.UPLOADED,
+            ActivityKind.DOWNLOADED,
+            ActivityKind.MOVED,
+            ActivityKind.FOLDER_CREATED,
+            ActivityKind.RESTORED,
+        ),
+    ),
     DELETES(setOf(ActivityKind.TRASHED_ON_DRIVE, ActivityKind.RECYCLED_ON_PHONE)),
     CONFLICTS(setOf(ActivityKind.CONFLICT)),
     PROBLEMS(setOf(ActivityKind.FAILED, ActivityKind.PAUSED, ActivityKind.WAITING_FOR_CONFIRMATION)),

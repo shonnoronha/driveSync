@@ -7,7 +7,7 @@ import io.github.drivesync.core.sync.plan.MoveReason
 import io.github.drivesync.core.sync.plan.SyncAction.Download
 import io.github.drivesync.core.sync.plan.SyncAction.ForgetBase
 import io.github.drivesync.core.sync.plan.SyncAction.Link
-import io.github.drivesync.core.sync.plan.SyncAction.MoveRemote
+import io.github.drivesync.core.sync.plan.SyncAction.MoveLocal
 import io.github.drivesync.core.sync.plan.SyncAction.RecycleLocal
 import io.github.drivesync.core.sync.plan.SyncAction.TrashRemote
 import io.github.drivesync.core.sync.plan.SyncAction.Upload
@@ -147,16 +147,16 @@ class SyncPlannerMatrixTest {
     @Nested
     inner class BothModified {
         @Test
-        fun `different content keeps both - Drive version becomes the conflict copy`() {
+        fun `different content keeps both - phone version becomes the copy`() {
             val l = local("a.txt", "local edit", lastModified = EDITED_MTIME)
             val r = remote("a.txt", "drive edit", version = 2)
             val copy = conflictCopy("a.txt")
             val plan = planReady(listOf(l), listOf(r), base)
             assertActions(
                 plan,
-                MoveRemote(copy, a, r, MoveReason.CONFLICT_COPY),
-                Upload(a, l, replaces = null),
-                Download(copy, r.copy(path = copy), replaces = null),
+                MoveLocal(copy, a, l, MoveReason.CONFLICT_COPY),
+                Upload(copy, l.copy(path = copy), replaces = null),
+                Download(a, r, replaces = null),
             )
             assertConflicts(plan, Conflict(a, ConflictKind.BOTH_MODIFIED, ConflictResolution.KEPT_BOTH, copy))
         }
@@ -226,9 +226,9 @@ class SyncPlannerMatrixTest {
             val plan = planReady(listOf(l), listOf(r), emptyList())
             assertActions(
                 plan,
-                MoveRemote(copy, a, r, MoveReason.CONFLICT_COPY),
-                Upload(a, l, replaces = null),
-                Download(copy, r.copy(path = copy), replaces = null),
+                MoveLocal(copy, a, l, MoveReason.CONFLICT_COPY),
+                Upload(copy, l.copy(path = copy), replaces = null),
+                Download(a, r, replaces = null),
             )
             assertConflicts(plan, Conflict(a, ConflictKind.BOTH_NEW, ConflictResolution.KEPT_BOTH, copy))
         }

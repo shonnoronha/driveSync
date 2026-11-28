@@ -72,7 +72,11 @@ internal fun StatusSection(
                 }
             when (pair.state) {
                 PairState.NEEDS_ATTENTION -> {
-                    AttentionActions(state.accessLost, actions)
+                    if (state.googleAccessNeeded) {
+                        GoogleAccessActions(actions)
+                    } else {
+                        AttentionActions(state.accessLost, actions)
+                    }
                 }
 
                 PairState.CONFIRM_DELETES -> {
@@ -120,6 +124,19 @@ private fun AttentionActions(
     }
 }
 
+/** Google access lapsed or was revoked (FR-A4): granting it again resumes every folder, nothing is lost. */
+@Composable
+private fun GoogleAccessActions(actions: PairDetailActions) {
+    Text(stringResource(R.string.detail_google_access_hint), style = MaterialTheme.typography.bodyMedium)
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(Tokens.gapSm),
+        verticalArrangement = Arrangement.spacedBy(Tokens.gapSm),
+    ) {
+        Button(onClick = actions.onGrantGoogleAccess) { Text(stringResource(R.string.detail_google_access)) }
+        OutlinedButton(onClick = actions.onSyncNow) { Text(stringResource(R.string.detail_try_again)) }
+    }
+}
+
 @Composable
 private fun ConfirmDeletesActions(actions: PairDetailActions) {
     Text(stringResource(R.string.detail_confirm_hint), style = MaterialTheme.typography.bodyMedium)
@@ -160,6 +177,14 @@ internal fun FolderSection(
                 subtitle = stringResource(R.string.detail_files_body),
                 icon = Sym.CloudDone,
                 onClick = actions.onOpenFiles,
+            )
+        }
+        item {
+            SettingsRow(
+                title = stringResource(R.string.detail_rewind),
+                subtitle = stringResource(R.string.detail_rewind_body),
+                icon = Sym.History,
+                onClick = actions.onOpenRewind,
             )
         }
     }
@@ -204,6 +229,16 @@ internal fun OptionsSection(
             }
         }
         item { PolicyRow(state.settings.conflictPolicy, actions.onPolicy) }
+        item {
+            SettingsSwitchRow(
+                stringResource(R.string.detail_subfolders),
+                state.settings.filters.includeSubfolders,
+                { on -> actions.onEdit { it.copy(filters = it.filters.copy(includeSubfolders = on)) } },
+                subtitle = stringResource(R.string.detail_subfolders_body),
+                icon = Sym.Folder,
+            )
+        }
+        item { FileRulesRow(state.settings.filters, actions.onFilters) }
     }
 }
 

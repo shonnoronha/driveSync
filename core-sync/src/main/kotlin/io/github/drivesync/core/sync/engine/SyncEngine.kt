@@ -1,5 +1,6 @@
 package io.github.drivesync.core.sync.engine
 
+import io.github.drivesync.core.sync.model.BaseEntry
 import io.github.drivesync.core.sync.model.BaseSnapshot
 import io.github.drivesync.core.sync.model.ConflictPolicy
 import io.github.drivesync.core.sync.model.LocalEntry
@@ -13,6 +14,10 @@ import io.github.drivesync.core.sync.plan.IgnoreRules
 import io.github.drivesync.core.sync.plan.PauseReason
 import io.github.drivesync.core.sync.plan.PlanInput
 import io.github.drivesync.core.sync.plan.PlanResult
+import io.github.drivesync.core.sync.plan.RewindInput
+import io.github.drivesync.core.sync.plan.RewindPlan
+import io.github.drivesync.core.sync.plan.RewindPlanner
+import io.github.drivesync.core.sync.plan.RewindRefusal
 import io.github.drivesync.core.sync.plan.SyncPlan
 import io.github.drivesync.core.sync.plan.SyncPlanner
 import io.github.drivesync.core.sync.store.BaseStore
@@ -44,7 +49,7 @@ class SyncEngine(
             progress.onProgress(SyncProgress.Checking)
             val base = baseStore.load()
             val remoteSnapshot = remote.scan()
-            val localSnapshot = withHashes(cleanUpTempFiles(local.scan()), remoteSnapshot, base)
+            val localSnapshot = withHashes(cleanUpTempFiles(local.scan()), remoteSnapshot, base, settings)
             val input = PlanInput(localSnapshot, remoteSnapshot, base, settings, stamp, deletionsConfirmed, resolutions)
             when (val result = SyncPlanner.plan(input)) {
                 is PlanResult.Paused -> {
@@ -64,6 +69,42 @@ class SyncEngine(
             }
         }
 
+    /**
+     * Rewind: puts the folder back the way it was at an earlier point of its history. [target] is the base at that
+     * point (from a BaseTimeline). Runs under the same lock as [sync]; see [RewindPlanner] for the safety rules.
+     */
+    suspend fun rewind(
+        target: Map<RelPath, BaseEntry>,
+        settings: PairSettings,
+        progress: SyncProgressListener = SyncProgressListener.NONE,
+    ): RewindOutcome =
+        mutex.withLock {
+            progress.onProgress(SyncProgress.Checking)
+            val base = baseStore.load() ?: return@withLock RewindOutcome.Refused(RewindRefusal.NO_HISTORY)
+            val current = base.entries.associateBy { it.path }
+            RewindPlanner.refusal(target, current)?.let { return@withLock RewindOutcome.Refused(it) }
+            val remoteSnapshot = remote.scan()
+            val localSnapshot = cleanUpTempFiles(local.scan())
+            if (remoteSnapshot !is Snapshot.Available) {
+                return@withLock RewindOutcome.Refused(RewindRefusal.REMOTE_UNAVAILABLE)
+            }
+            if (localSnapshot !is Snapshot.Available) {
+                return@withLock RewindOutcome.Refused(RewindRefusal.LOCAL_UNAVAILABLE)
+            }
+            val versions = RewindPlanner.versionsNeeded(target, current).associateWith { remote.versions(it) }
+            val input =
+                RewindInput(
+                    target,
+                    current,
+                    localSnapshot.entries,
+                    remoteSnapshot.entries,
+                    versions,
+                    settings.filters,
+                )
+            val plan = RewindPlanner.plan(input)
+            RewindOutcome.Completed(plan, executor.execute(plan.asSyncPlan(), base, progress))
+        }
+
     /** PRD 3.9 rule 6: half-written downloads from an interrupted run are deleted on the next run. */
     private suspend fun cleanUpTempFiles(snapshot: Snapshot<LocalEntry>): Snapshot<LocalEntry> {
         if (snapshot !is Snapshot.Available) return snapshot
@@ -77,9 +118,13 @@ class SyncEngine(
         local: Snapshot<LocalEntry>,
         remote: Snapshot<RemoteEntry>,
         base: BaseSnapshot?,
+        settings: PairSettings,
     ): Snapshot<LocalEntry> {
         if (local !is Snapshot.Available || remote !is Snapshot.Available) return local
-        val needed = HashRequirements.localPathsNeedingHash(local.entries, remote.entries, base)
+        // Files the user excluded are never planned, so never worth reading (a skipped 4 GB video stays unread).
+        val excluded = settings.filters.excludedPaths(local.entries, remote.entries)
+        val needed =
+            HashRequirements.localPathsNeedingHash(local.entries, remote.entries, base) - excluded
         if (needed.isEmpty()) return local
         return Snapshot.Available(
             local.entries.map { entry ->
@@ -109,4 +154,15 @@ sealed interface SyncOutcome {
         val plan: SyncPlan,
         val report: ExecutionReport,
     ) : SyncOutcome
+}
+
+sealed interface RewindOutcome {
+    data class Refused(
+        val reason: RewindRefusal,
+    ) : RewindOutcome
+
+    data class Completed(
+        val plan: RewindPlan,
+        val report: ExecutionReport,
+    ) : RewindOutcome
 }

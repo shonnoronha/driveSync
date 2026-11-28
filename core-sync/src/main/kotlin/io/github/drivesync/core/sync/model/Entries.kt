@@ -48,6 +48,12 @@ data class BaseEntry(
     val localLastModified: Long = 0,
     val remoteFileId: String? = null,
     val remoteVersion: Long = 0,
+    /**
+     * Set when the Drive file has another name than [path]: Drive holds several files with that name and this
+     * one is kept on the phone under a conflict name. Drive is never renamed for this; the phone copy gets the
+     * Drive name back once the clash is gone. Null means the same path on both sides.
+     */
+    val remotePath: RelPath? = null,
 )
 
 /** Result of scanning one side. [Unavailable] must never be read as "everything was deleted" (PRD 3.9 rule 1). */
@@ -64,4 +70,15 @@ sealed interface Snapshot<out T> {
 /** All base entries of a pair. A pair with no base at all (first sync, reinstall) is represented by `null`. */
 data class BaseSnapshot(
     val entries: List<BaseEntry>,
+)
+
+/**
+ * One version Drive keeps of a file (Rewind). Drive keeps versions for 30 days or 100 versions per file unless one
+ * is pinned; the current content is always among them.
+ */
+data class RemoteVersion(
+    val revisionId: String,
+    val md5: String?,
+    val size: Long,
+    val modifiedTime: Long,
 )

@@ -12,6 +12,8 @@ import io.github.drivesync.core.sync.store.BaseUpdate
 class RoomBaseStore(
     private val dao: BaseDao,
     private val pairId: String,
+    /** Groups this run's changes in the history (Rewind): one store per run. */
+    private val runAt: Long,
 ) : BaseStore {
     override suspend fun load(): BaseSnapshot? {
         if (dao.hasBase(pairId) != true) return null
@@ -32,7 +34,7 @@ class RoomBaseStore(
         }
         val puts = latest.values.filterIsInstance<BaseUpdate.Put>().map { it.entry.toEntity() }
         val removes = latest.values.filterIsInstance<BaseUpdate.Remove>().map { it.path.value }
-        dao.apply(pairId, puts, removes)
+        dao.apply(pairId, runAt, puts, removes)
     }
 
     private fun BaseEntryEntity.toModel() =
@@ -44,6 +46,7 @@ class RoomBaseStore(
             localLastModified = localLastModified,
             remoteFileId = remoteFileId,
             remoteVersion = remoteVersion,
+            remotePath = remotePath?.let(RelPath::of),
         )
 
     private fun BaseEntry.toEntity() =
@@ -56,5 +59,6 @@ class RoomBaseStore(
             localLastModified = localLastModified,
             remoteFileId = remoteFileId,
             remoteVersion = remoteVersion,
+            remotePath = remotePath?.value,
         )
 }
